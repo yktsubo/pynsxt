@@ -1,0 +1,38 @@
+dns: '192.168.110.10'
+ntp: '192.168.110.10'
+domain: 'corp.local'
+
+nsxManager:
+  ova: '/home/vmware/nsx-unified-appliance-2.0.0.0.0.6522097.ova'
+  name: 'nsxmgr-01a'
+  ip: '192.168.110.201' 
+  netmask: '255.255.255.0'
+  network: 'VM Network'
+  datacenter: 'DC-SiteA' 
+  cluster: 'Mgmt-Edge-Cluster'
+  mask: '24'
+  gw: '192.168.110.1'
+  password: 'VMware1!' 
+  datastore: 'ds-site-a-nfs02'
+  user: 'admin'
+  vmhost: '192.168.110.151'
+
+nsxController:
+  - name: 'nsxc-site3-01'
+    ova: '/home/ytsuboi/images/nsx-t/nsx-2.0/nsx-controller-2.0.0.0.0.6522091.ova'
+    secret: 'VMware1!'
+    user: 'admin'
+    ip: '10.16.181.114' 
+    netmask: '255.255.255.0'
+    network: 'Management881PG'
+    datacenter: 'MyDC1' 
+    cluster: 'Management'
+    mask: '24'
+    gw: '10.16.181.1'
+    password: 'VMware1!' 
+    datastore: 'Datastore-sm1-35'
+
+vc_mng:
+  ip: '192.168.110.22'
+  user: 'administrator@vsphere.local' 
+  password: 'VMware1!' 
