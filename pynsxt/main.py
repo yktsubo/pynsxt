@@ -9,6 +9,7 @@ import nsx_edge
 import nsx_fabric
 import nsx_transport
 import nsx_poolmanagement
+import nsx_logicalswitch
 import pynsxt_utils
 import vsphere_utils
 
@@ -41,6 +42,7 @@ def get_args():
     nsx_fabric.construct_parser(subparsers)
     nsx_transport.construct_parser(subparsers)
     nsx_poolmanagement.construct_parser(subparsers)
+    nsx_logicalswitch.construct_parser(subparsers)
     vsphere_utils.construct_parser(subparsers)
     return parser.parse_args()
 
