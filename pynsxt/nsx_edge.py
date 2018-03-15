@@ -43,8 +43,8 @@ def deploy_edge(args):
                    edge['password'])
         cmd.append("--prop:nsx_hostname=%s" % edge['name'])
         cmd.append(edge['ova'])
-        cmd.append("vi://%s:%s@%s/?ip=%s" % (config['vc_mng']['user'], config['vc_mng']
-                                             ['password'], config['vc_mng']['ip'], edge['vmhost']))
+        cmd.append("vi://%s:%s@%s/%s/host/%s" % (config['vcenter']['user'], config['vcenter']
+                                             ['password'], config['vcenter']['ip'],  edge['datacenter'], edge['cluster']))
         logger.debug('Executing command: ' + " ".join(cmd))
         ret = subprocess.check_call(" ".join(cmd), shell=True)
         if ret != 0:

@@ -39,8 +39,8 @@ def deploy_manager(args):
     cmd.append("--prop:nsx_cli_passwd_0=%s" % config['nsxManager']['password'])
     cmd.append("--prop:nsx_hostname=%s" % config['nsxManager']['name'])
     cmd.append(config['nsxManager']['ova'])
-    cmd.append("vi://%s:%s@%s/?ip=%s" % (config['vc_mng']['user'], config['vc_mng']
-                                         ['password'], config['vc_mng']['ip'], config['nsxManager']['vmhost']))
+    cmd.append("vi://%s:%s@%s/%s/host/%s" % (config['vcenter']['user'], config['vcenter']
+                                         ['password'], config['vcenter']['ip'], config['nsxManager']['datacenter'], config['nsxManager']['cluster']))
 
     logger.debug('Executing command: ' + " ".join(cmd))
     ret = subprocess.check_call(" ".join(cmd), shell=True)
