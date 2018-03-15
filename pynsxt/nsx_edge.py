@@ -7,7 +7,7 @@ import time
 from pynsxt_utils import load_configfile, connect_cli, exec_command
 from nsx_manager import get_thumbprint
 from logging import basicConfig, getLogger, DEBUG
-
+from argparse import RawTextHelpFormatter
 logger = getLogger(__name__)
 
 
@@ -43,8 +43,8 @@ def deploy_edge(args):
                    edge['password'])
         cmd.append("--prop:nsx_hostname=%s" % edge['name'])
         cmd.append(edge['ova'])
-        cmd.append("vi://%s:%s@%s/?ip=%s" % (config['vc_mng']['user'], config['vc_mng']
-                                             ['password'], config['vc_mng']['ip'], edge['vmhost']))
+        cmd.append("vi://%s:%s@%s/%s/host/%s" % (config['vcenter']['user'], config['vcenter']
+                                             ['password'], config['vcenter']['ip'],  edge['datacenter'], edge['cluster']))
         logger.debug('Executing command: ' + " ".join(cmd))
         ret = subprocess.check_call(" ".join(cmd), shell=True)
         if ret != 0:
@@ -94,10 +94,44 @@ def _get_manager_status(edge):
         edge['join_manager'] = False
 
 
+def list_edge_cluster(client):
+    """
+    This function returns all edge cluster in NSX
+    :param client: bravado client for NSX
+    :return: returns the list of edge cluster
+    """
+    request = client.__getattr__('Network Transport').ListEdgeClusters()
+    try:
+        response, responseAdpter = request.result()
+    except:
+        logger.error("Could not get edge clusters")
+        return []
+    return response['results']
+
+
+def _list_edge_cluster(client, **kwargs):
+    edge_cluster_list = list_edge_cluster(client)
+    _print_edge_cluster_tabulate(edge_cluster_list)
+
+
+def _print_edge_cluster_tabulate(edge_cluster_list):
+    print_list = []
+    for edge_cluster in edge_cluster_list:
+        print_list.append((logicalrouter['display_name'],
+                           logicalrouter['id'],
+                           logicalrouter['router_type'],
+                           logicalrouter['edge_cluster_id'],
+                           logicalrouter['failover_mode'],
+                           logicalrouter['high_availability_mode']))
+    print tabulate(print_list, headers=["LR name", "ID", "Type", "Failover mode", "High availability mode"], tablefmt="psql")
+    pass
+
+
 def construct_parser(subparsers):
-    edge_parser = subparsers.add_parser('edge', description="Functions for NSX edge",
-                                        help="Functions for NSX edge")
-    edge_subparsers = edge_parser.add_subparsers()
+    parser = subparsers.add_parser('edge', description="Functions for NSX edge",
+                                   help="Functions for NSX edge",
+                                        formatter_class=RawTextHelpFormatter)
+    edge_subparsers = parser.add_subparsers()
     edge_deploy_parser = edge_subparsers.add_parser(
         'deploy', help='Deploy NSX-T')
     edge_deploy_parser.set_defaults(func=deploy_edge)
@@ -109,3 +143,48 @@ def construct_parser(subparsers):
     edge_status_parser = edge_subparsers.add_parser(
         'status', help='Status of NSX edge')
     edge_status_parser.set_defaults(func=get_status)
+
+    # parser.add_argument("command", help="""
+    # list_edge_cluster:   List Edge Cluster
+    # """)
+
+    # parser.add_argument("-n",
+    #                     "--display_name",
+    #                     help="name for object")
+    # parser.add_argument("-i",
+    #                     "--oid",
+    #                     help="id for an object")
+
+    # parser.set_defaults(func=_edge_main)
+
+
+def _edge_main(args):
+    if args.debug:
+        debug = True
+    else:
+        debug = False
+    config = load_configfile(args)
+    client = get_api_client(config, validation=args.spec_validation)
+
+    try:
+        command_selector = {
+            'list_edge_cluster': _list_edge_cluster
+        }
+        command_selector[args.command](client,
+                                       display_name=args.display_name,
+                                       oid=args.oid)
+
+    except KeyError as e:
+        print('Unknown command {}'.format(e))
+
+
+def main():
+    main_parser = argparse.ArgumentParser()
+    subparsers = main_parser.add_subparsers()
+    contruct_parser(subparsers)
+    args = main_parser.parse_args()
+    args.func(args)
+
+
+if __name__ == "__main__":
+    main()

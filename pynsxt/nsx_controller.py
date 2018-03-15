@@ -42,8 +42,8 @@ def deploy_controller(args):
                    controller['password'])
         cmd.append("--prop:nsx_hostname=%s" % controller['name'])
         cmd.append(controller['ova'])
-        cmd.append("vi://%s:%s@%s/?ip=%s" % (config['vc_mng']['user'], config['vc_mng']
-                                             ['password'], config['vc_mng']['ip'], controller['vmhost']))
+        cmd.append("vi://%s:%s@%s/%s/host/%s" % (config['vcenter']['user'], config['vcenter']
+                                             ['password'], config['vcenter']['ip'], controller['datacenter'], controller['cluster']))
         logger.debug('Executing command: ' + " ".join(cmd))
         ret = subprocess.check_call(" ".join(cmd), shell=True)
         if ret != 0:
