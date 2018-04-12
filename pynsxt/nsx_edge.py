@@ -4,11 +4,15 @@ import argparse
 import subprocess
 import requests
 import time
+import nsx_edgecluster
 from pynsxt_utils import load_configfile, connect_cli, exec_command
 from nsx_manager import get_thumbprint
 from logging import basicConfig, getLogger, DEBUG
-from argparse import RawTextHelpFormatter
+
 logger = getLogger(__name__)
+
+OBJECT = 'Edge'
+MODULE = 'Fabric'
 
 
 def deploy_edge(args):
@@ -94,113 +98,32 @@ def _get_manager_status(edge):
         edge['join_manager'] = False
 
 
-def list_edgenode(client):
-    request = client.__getattr__('Fabric').ListNodes(resource_type='EdgeNode')
-    try:
-        response, responseAdpter = request.result()
-    except:
-        logger.error("Could not get nodes")
-        return []
+def get_list(client):
+    """
+    """
+    request = client.__getattr__(MODULE).ListNodes(resource_type='EdgeNode')
+    response, _ = request.result()
     return response['results']
 
 
-def _list_edgenode(client, **kwargs):
-    node_list = list_edgenode(client)
-    _print_edgenode_tabulate(node_list)
-    pass
+def get_id(client, data):
+    if data.has_key('id'):
+        return data['id']
+    elif data.has_key('display_name'):
+        objects = get_list(client)
+        for obj in objects:
+            if obj['display_name'] == data['display_name']:
+                return obj['id']
+    return None
 
 
-def list_edge_cluster(client):
-    """
-    This function returns all edge cluster in NSX
-    :param client: bravado client for NSX
-    :return: returns the list of edge cluster
-    """
-    request = client.__getattr__('Network Transport').ListEdgeClusters()
-    try:
-        response, responseAdpter = request.result()
-    except:
-        logger.error("Could not get edge clusters")
-        return []
-    return response['results']
-
-
-def _list_edge_cluster(client, **kwargs):
-    edge_cluster_list = list_edge_cluster(client)
-    _print_edge_cluster_tabulate(edge_cluster_list)
-
-
-def _print_edge_cluster_tabulate(edge_cluster_list):
-    print_list = []
-    for edge_cluster in edge_cluster_list:
-        print_list.append((logicalrouter['display_name'],
-                           logicalrouter['id'],
-                           logicalrouter['router_type'],
-                           logicalrouter['edge_cluster_id'],
-                           logicalrouter['failover_mode'],
-                           logicalrouter['high_availability_mode']))
-    print tabulate(print_list, headers=["LR name", "ID", "Type", "Failover mode", "High availability mode"], tablefmt="psql")
-    pass
-
-
-def construct_parser(subparsers):
-    parser = subparsers.add_parser('edge', description="Functions for NSX edge",
-                                   help="Functions for NSX edge",
-                                        formatter_class=RawTextHelpFormatter)
-    edge_subparsers = parser.add_subparsers()
-    edge_deploy_parser = edge_subparsers.add_parser(
-        'deploy', help='Deploy NSX-T')
-    edge_deploy_parser.set_defaults(func=deploy_edge)
-
-    edge_join_manager_parser = edge_subparsers.add_parser(
-        'join_manager', help='Join with NSX manager')
-    edge_join_manager_parser.set_defaults(func=join_manager)
-
-    edge_status_parser = edge_subparsers.add_parser(
-        'status', help='Status of NSX edge')
-    edge_status_parser.set_defaults(func=get_status)
-
-    # parser.add_argument("command", help="""
-    # list_edge_cluster:   List Edge Cluster
-    # """)
-
-    # parser.add_argument("-n",
-    #                     "--display_name",
-    #                     help="name for object")
-    # parser.add_argument("-i",
-    #                     "--oid",
-    #                     help="id for an object")
-
-    # parser.set_defaults(func=_edge_main)
-
-
-def _edge_main(args):
-    if args.debug:
-        debug = True
+def get_memberid(client, data, edgecluster=None):
+    if edgecluster:
+        for edge in edge_cluster['members']:
+            if edge['transport_node_id'] == get_id(client, data):
+                return edge['member_index']
     else:
-        debug = False
-    config = load_configfile(args)
-    client = get_api_client(config, validation=args.spec_validation)
-
-    try:
-        command_selector = {
-            'list_edge_cluster': _list_edge_cluster
-        }
-        command_selector[args.command](client,
-                                       display_name=args.display_name,
-                                       oid=args.oid)
-
-    except KeyError as e:
-        print('Unknown command {}'.format(e))
-
-
-def main():
-    main_parser = argparse.ArgumentParser()
-    subparsers = main_parser.add_subparsers()
-    contruct_parser(subparsers)
-    args = main_parser.parse_args()
-    args.func(args)
-
-
-if __name__ == "__main__":
-    main()
+        for edge_cluster in nsx_edgecluster.get_list(client):
+            for edge in edge_cluster['members']:
+                if edge['transport_node_id'] == get_id(client, data):
+                    return edge['member_index']

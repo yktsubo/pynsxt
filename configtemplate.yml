@@ -7,165 +7,211 @@ env:
 # action: create,update,delete
     
 tasks:
-  # - module: 'T0'
-  #   action: 'create'
-  #   data:
-  #     display_name: 'T0'
-  #     edge_cluster_id: 'edge-cluster'
-  #     failover_mode: 'PREEMPTIVE'
-  #     high_availability_mode: 'ACTIVE_STANDBY'
-  #     router_type: 'TIER0'
-  #     tags:
-  #       - scope: 'ncp/cluster'
-  #         tag: 'os-cluster1'
+  - module: 'LogicalSwitch'
+    action: 'create'
+    data:
+      display_name: 'Openshift-mgmt'
+      transport_zone_id: 'OverlayTZ'
 
-  # - module: 'LogicalSwitch'
-  #   action: 'create'
-  #   data:
-  #     display_name: 'Openshift-mgmt'
-  #     transport_zone_id: 'OverlayTZ'
+  - module: 'LogicalSwitch'
+    action: 'create'
+    data:
+      display_name: 'Openshift-service'
+      transport_zone_id: 'OverlayTZ'
 
-  # - module: 'LogicalSwitch'
-  #   action: 'create'
-  #   data:
-  #     display_name: 'Openshift-service'
-  #     transport_zone_id: 'OverlayTZ'
+  - module: 'LogicalSwitch'
+    action: 'create'
+    data:
+      display_name: 'ExternalLS'
+      transport_zone_id: 'VlanTZ'
+      vlan: '893'
 
-  # - module: 'LogicalSwitch'
-  #   action: 'create'
-  #   data:
-  #     display_name: 'ExternalLS'
-  #     transport_zone_id: 'VlanTZ'
-  #     vlan: '893'
+  - module: 'T0'
+    action: 'create'
+    data:
+      display_name: 'T0'
+      edge_cluster_id: 'edge-cluster'
+      failover_mode: 'PREEMPTIVE'
+      high_availability_mode: 'ACTIVE_STANDBY'
+      router_type: 'TIER0'
+      tags:
+        - scope: 'ncp/cluster'
+          tag: 'os-cluster1'
+      
+  - module: 'T0'
+    action: 'update'
+    data:
+      display_name: 'T0'
+      create_uplink:
+        ls: 'ExternalLS'
+        display_name: 'Uplink1'
+        ip_address: '192.168.12.1'
+        prefix_length: '24'
+        edge_node: 'nsxe-site3-01'
 
-  # - module: 'T0'
-  #   action: 'update'
-  #   data:
-  #     display_name: 'T0'
-  #     create_uplink:
-  #       ls: 'ExternalLS'
-  #       display_name: 'Uplink1'
-  #       ip_address: '192.168.12.1'
-  #       prefix_length: '24'
-  #       edge_node: 'nsxe-site3-01'
+  - module: 'T0'
+    action: 'update'
+    data:
+      display_name: 'T0'
+      create_uplink:
+        ls: 'ExternalLS'
+        display_name: 'Uplink2'
+        ip_address: '192.168.12.2'
+        prefix_length: '24'
+        edge_node: 'nsxe-site3-02'
 
-  # - module: 'T0'
-  #   action: 'update'
-  #   data:
-  #     display_name: 'T0'
-  #     create_uplink:
-  #       ls: 'ExternalLS'
-  #       display_name: 'Uplink2'
-  #       ip_address: '192.168.12.2'
-  #       prefix_length: '24'
-  #       edge_node: 'nsxe-site3-02'
+  - module: 'T0'
+    action: 'update'
+    data:
+      display_name: 'T0'
+      add_static_route:
+        network: '0.0.0.0/0'
+        next_hops:
+          - administrative_distance: '1'
+            ip_address: '192.168.12.254'
 
-  # - module: 'T0'
-  #   action: 'update'
-  #   data:
-  #     display_name: 'T0'
-  #     add_static_route:
-  #       network: '0.0.0.0/0'
-  #       next_hops:
-  #         - administrative_distance: '1'
-  #           ip_address: '192.168.12.254'
-
-  # - module: 'T0'
-  #   action: 'update'
-  #   data:
-  #     display_name: 'T0'
-  #     ha_vip_config:
-  #       vip: '192.168.12.10'
-  #       prefix_length: '24'
-  #       uplinks:
-  #         - 'Uplink1'
-  #         - 'Uplink2'
+  - module: 'T0'
+    action: 'update'
+    data:
+      display_name: 'T0'
+      ha_vip_config:
+        vip: '192.168.12.10'
+        prefix_length: '24'
+        uplinks:
+          - 'Uplink1'
+          - 'Uplink2'
   
-  # - module: 'T1'
-  #   action: 'create'
-  #   data:
-  #     display_name: 'T1-osmgmt'
-  #     failover_mode: 'PREEMPTIVE'
-  #     router_type: 'TIER1'
+  - module: 'T1'
+    action: 'create'
+    data:
+      display_name: 'T1-osmgmt'
+      failover_mode: 'PREEMPTIVE'
+      router_type: 'TIER1'
 
-  # - module: 'T1'
-  #   action: 'update'
-  #   data:
-  #     display_name: 'T1-osmgmt'      
-  #     connect_to_T0: 'T0'
+  - module: 'T1'
+    action: 'update'
+    data:
+      display_name: 'T1-osmgmt'      
+      connect_to_T0: 'T0'
 
+
+  - module: 'T1'
+    action: 'update'
+    data:
+      display_name: 'T1-osmgmt'      
+      connect_to_LS:
+        ls: 'Openshift-mgmt'
+        ip_address: '192.168.140.254'
+        prefix_length: '24'
+
+  - module: 'T1'
+    action: 'update'
+    data:
+      display_name: 'T1-osmgmt'      
+      advertisement:
+        enabled: 'True'
+        advertise_nsx_connected_routes: 'True'
 
   - module: 'T1'
     action: 'delete'
     data:
-      display_name: 'T1-osmgmt'      
+      display_name: 'T1-osmgmt'
+      
+  - module: 'T0'
+    action: 'delete'
+    data:
+      display_name: 'T0'
 
+  - module: 'LogicalSwitch'
+    action: 'delete'
+    data:
+      display_name: 'Openshift-mgmt'
 
-  # - module: 'T1'
-  #   action: 'update'
-  #   data:
-  #     display_name: 'T1-osmgmt'      
-  #     connect_to_LS:
-  #       ls: 'Openshift-mgmt'
-  #       ip_address: '192.168.140.254'
-  #       prefix_length: '24'
+  - module: 'LogicalSwitch'
+    action: 'delete'
+    data:
+      display_name: 'Openshift-service'
 
-  # - module: 'T1'
-  #   action: 'update'
-  #   data:
-  #     display_name: 'T1-osmgmt'      
-  #     advertisement:
-  #       enabled: 'True'
-  #       advertise_nsx_connected_routes: 'True'
-        
-  # - module: 'IPPool'
-  #   action: 'create'
-  #   data:
-  #     display_name: 'Openshift-ippool'
-  #     subnets:
-  #       - allocation_ranges:
-  #           - start: '192.168.14.1'
-  #             end: '192.168.14.200'
-  #         cidr: '192.168.14.0/24'
-  #     tags:
-  #       - scope: 'ncp/cluster'
-  #         tag: 'os-cluster1'
-  #       - scope: 'ncp/external'
-  #         tag: 'true'
+  - module: 'LogicalSwitch'
+    action: 'delete'
+    data:
+      display_name: 'ExternalLS'
+      
+  - module: 'IPPool'
+    action: 'create'
+    data:
+      display_name: 'Openshift-ippool'
+      subnets:
+        - allocation_ranges:
+            - start: '192.168.14.1'
+              end: '192.168.14.200'
+          cidr: '192.168.14.0/24'
+      tags:
+        - scope: 'ncp/cluster'
+          tag: 'os-cluster1'
+        - scope: 'ncp/external'
+          tag: 'true'
 
-  # - module: 'IPBlock'
-  #   action: 'create'
-  #   data:
-  #     display_name: 'openshift-ipblock'      
-  #     cidr: '172.16.0.0/16'
-  #     tags:
-  #       - scope: 'ncp/cluster'
-  #         tag: 'os-cluster1'
+  - module: 'IPPool'
+    action: 'delete'
+    data:
+      display_name: 'Openshift-ippool'
+          
+  - module: 'IPBlock'
+    action: 'create'
+    data:
+      display_name: 'openshift-ipblock'      
+      cidr: '172.16.0.0/16'
+      tags:
+        - scope: 'ncp/cluster'
+          tag: 'os-cluster1'
 
-  # - module: 'DFWSection'
-  #   action: 'create'
-  #   data:
-  #     display_name: 'Admin Bottom'
-  #     section_type: 'LAYER3'
-  #     stateful: 'True'
-  #     tags:
-  #       - scope: 'ncp/fw_sect_marker'
-  #         tag: 'bottom'
+  - module: 'IPBlock'
+    action: 'delete'
+    data:
+      display_name: 'openshift-ipblock'      
+          
+  - module: 'DFWSection'
+    action: 'create'
+    data:
+      display_name: 'Admin Bottom'
+      section_type: 'LAYER3'
+      stateful: 'True'
+      tags:
+        - scope: 'ncp/fw_sect_marker'
+          tag: 'bottom'
 
-  # - module: 'DFWSection'
-  #   action: 'create'
-  #   data:
-  #     display_name: 'Admin Middle'
-  #     section_type: 'LAYER3'
-  #     stateful: 'True'
+  - module: 'DFWSection'
+    action: 'create'
+    data:
+      display_name: 'Admin Middle'
+      section_type: 'LAYER3'
+      stateful: 'True'
 
-  # - module: 'DFWSection'
-  #   action: 'create'
-  #   data:
-  #     display_name: 'Admin Top'
-  #     section_type: 'LAYER3'
-  #     stateful: 'True'
-  #     tags:
-  #       - scope: 'ncp/fw_sect_marker'
-  #         tag: 'top'
+  - module: 'DFWSection'
+    action: 'create'
+    data:
+      display_name: 'Admin Top'
+      section_type: 'LAYER3'
+      stateful: 'True'
+      tags:
+        - scope: 'ncp/fw_sect_marker'
+          tag: 'top'
+          
+
+  - module: 'DFWSection'
+    action: 'delete'
+    data:
+      display_name: 'Admin Bottom'
+
+  - module: 'DFWSection'
+    action: 'delete'
+    data:
+      display_name: 'Admin Middle'
+
+  - module: 'DFWSection'
+    action: 'delete'
+    data:
+      display_name: 'Admin Top'
+          
           

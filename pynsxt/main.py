@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import argparse
-
+import time
 import nsx_manager
 import nsx_controller
 import nsx_edge
@@ -70,9 +70,10 @@ def _run(args):
             data = t['data']
         else:
             data = {}
-
+        logger.info("%s:%s action:%s" %
+                    (t['module'], t['data']['display_name'], t['action']))
         response = module_selector[t['module']].run(client, t['action'], data)
-        pprint(response)
+        time.sleep(1)
 
 
 def main():

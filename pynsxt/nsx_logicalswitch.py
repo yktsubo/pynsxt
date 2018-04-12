@@ -1,17 +1,5 @@
-#!/usr/bin/env python
-
-import argparse
-import subprocess
-import requests
-import time
-import json
-from pprint import pprint
-from pynsxt_utils import is_uuid
 import nsx_tz
 from logging import basicConfig, getLogger, DEBUG
-from argparse import RawTextHelpFormatter
-from tabulate import tabulate
-from pprint import pprint
 
 logger = getLogger(__name__)
 
@@ -20,9 +8,9 @@ OBJECT = 'LogicalSwitch'
 MODULE = 'Logical Switching'
 
 
-def _get_id(client, data):
+def get_id(client, data):
     if data.has_key('id'):
-        return param['id']
+        return data['id']
     elif data.has_key('display_name'):
         objects = get_list(client)
         for obj in objects:
@@ -38,15 +26,11 @@ def get_list(client):
     :return: returns the list of logical switch
     """
     request = client.__getattr__(MODULE).ListLogicalSwitches()
-    try:
-        response, _ = request.result()
-    except:
-        logger.error("Could not list " + OBJECT)
-        return []
+    response, _ = request.result()
     return response['results']
 
 
-def _create_ls(client, data):
+def create(client, data):
     """
     This function returns alled LOGICALSWITCH in NSX
     :param client: bravado client for NSX
@@ -54,11 +38,8 @@ def _create_ls(client, data):
              and item 1 containing the IPset id as string. The second item contains a list of dictionaries containing
              all ipset details
     """
-    if not is_uuid(data['transport_zone_id']):
-        tzs = nsx_tz.get_list(client)
-        tz = [t for t in tzs if t['display_name']
-              == data['transport_zone_id']][0]
-        data['transport_zone_id'] = tz['id']
+    tz = nsx_tz.get(client, {'display_name': data['transport_zone_id']})
+    data['transport_zone_id'] = tz['id']
 
     if tz['transport_type'] == 'VLAN':
         if not data['vlan']:
@@ -71,36 +52,40 @@ def _create_ls(client, data):
     data['admin_state'] = 'UP'
     param = {'LogicalSwitch': data}
     request = client.__getattr__(MODULE).CreateLogicalSwitch(**param)
-    try:
-        response, _ = request.result()
-    except:
-        logger.error("Could not create " + OBJECT)
-        return []
+    response, _ = request.result()
     return response
 
 
-def _delete_ls(client, data):
+def delete(client, data):
     """
     This function returns deleted LOGICALSWITCH in NSX
     :param client: bravado client for NSX
     :return: returns a list containing deleted logical switch
     """
-    param = {'lswitch-id': _get_id(client, data)}
+    param = {'lswitch-id': get_id(client, data)}
     request = client.__getattr__(MODULE).DeleteLogicalSwitch(**param)
-    try:
-        response = request.result()
-    except:
-        logger.error("Could not delete " + OBJECT)
-        return []
+    response = request.result()
     return response
 
 
+def exist(client, data):
+    if get_id(client, data):
+        return True
+    else:
+        return False
+
+
 def run(client, action, data):
-    logger.info(OBJECT + ' ' + action)
     if action == 'create':
-        return _create_ls(client, data)
+        if exist(client, data):
+            logger.error('Already exist')
+        else:
+            return create(client, data)
     elif action == 'update':
         logger.error('Not implemented')
         return None
     elif action == 'delete':
-        return _delete_ls(client, data)
+        if exist(client, data):
+            return delete(client, data)
+        else:
+            logger.error('Not exist')

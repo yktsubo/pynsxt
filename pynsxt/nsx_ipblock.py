@@ -1,17 +1,4 @@
-#!/usr/bin/env python
-
-import argparse
-import subprocess
-import requests
-import time
-import json
-from pprint import pprint
-from pynsxt_utils import is_uuid
-from nsx_edge import list_edge_cluster
 from logging import basicConfig, getLogger, DEBUG
-from argparse import RawTextHelpFormatter
-from tabulate import tabulate
-from pprint import pprint
 
 logger = getLogger(__name__)
 
@@ -23,17 +10,13 @@ def get_list(client):
     """
     """
     request = client.__getattr__(MODULE).ListIpBlocks()
-    try:
-        response, _ = request.result()
-    except:
-        logger.error("Could not list " + OBJECT)
-        return []
+    response, _ = request.result()
     return response['results']
 
 
-def _get_id(client, data):
+def get_id(client, data):
     if data.has_key('id'):
-        return param['id']
+        return data['id']
     elif data.has_key('display_name'):
         objects = get_list(client)
         for obj in objects:
@@ -42,35 +25,42 @@ def _get_id(client, data):
     return None
 
 
-def _create_ipblock(client, data):
+def create(client, data):
     """
     """
     param = {'IpBlock': data}
     request = client.__getattr__(MODULE).CreateIpBlock(**param)
-    try:
-        response, _ = request.result()
-    except:
-        logger.error("Could not create " + OBJECT)
-        return []
+    response, _ = request.result()
     return response
 
 
-def _delete_ipblock(client, data):
+def delete(client, data):
     """
     """
-    param = {'block-id': _get_id(client, data)}
+    param = {'block-id': get_id(client, data)}
     request = client.__getattr__(MODULE).DeleteIpBlock(**param)
-    try:
-        response = request.result()
-    except:
-        logger.error("Could not delete " + OBJECT)
-        return []
+    response = request.result()
     return response
+
+
+def exist(client, data):
+    if get_id(client, data):
+        return True
+    else:
+        return False
 
 
 def run(client, action, data):
-    logger.info(OBJECT + ' ' + action)
     if action == 'create':
-        return _create_ipblock(client, data)
+        if exist(client, data):
+            logger.error('Already exist')
+        else:
+            return create(client, data)
+    elif action == 'update':
+        logger.error('Not implemented')
+        return None
     elif action == 'delete':
-        return _delete_ipblock(client, data)
+        if exist(client, data):
+            return delete(client, data)
+        else:
+            logger.error('Not exist')

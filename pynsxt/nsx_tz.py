@@ -1,15 +1,4 @@
-#!/usr/bin/env python
-
-import argparse
-import subprocess
-import requests
-import time
-import json
-from pprint import pprint
 from logging import basicConfig, getLogger, DEBUG
-from argparse import RawTextHelpFormatter
-from tabulate import tabulate
-from pprint import pprint
 
 logger = getLogger(__name__)
 
@@ -17,9 +6,9 @@ OBJECT = 'Transport Zone'
 MODULE = 'Network Transport'
 
 
-def _get_id(client, data):
+def get_id(client, data):
     if data.has_key('id'):
-        return param['id']
+        return data['id']
     elif data.has_key('display_name'):
         objects = get_list(client)
         for obj in objects:
@@ -38,15 +27,18 @@ def get_list(client):
     """
 
     request = client.__getattr__(MODULE).ListTransportZones()
-    try:
-        response, _ = request.result()
-    except:
-        logger.error("Could not list " + OBJECT)
-        return []
+    response, _ = request.result()
     return response['results']
 
 
-def _create_tz(client, data):
+def get(client, data):
+    param = {'zone-id': get_id(client, data)}
+    request = client.__getattr__(MODULE).GetTransportZone(**param)
+    response, _ = request.result()
+    return response
+
+
+def create(client, data):
     """
     This function returns alled TZ in NSX
     :param client: bravado client for NSX
@@ -55,25 +47,17 @@ def _create_tz(client, data):
              all ipset details
     """
     param = {'TransportZone': data}
-    request = client.__getattr__(
-        'Network Transport').CreateTransportZone(**param)
-    try:
-        response, _ = request.result()
-    except:
-        logger.error("Could not add transport zone")
-        return []
+    request = client.__getattr__(MODULE).CreateTransportZone(**param)
+    response, _ = request.result()
     return response
 
 
-def _update_tz(client, data):
+def update(client, data):
     """
     """
-    param = {'zone-id': _get_tzid(client, data)}
-    request = client.__getattr__('Network Transport').GetTransportZone(**param)
-    try:
-        tz, responseAdapter = request.result()
-    except:
-        logger.error("Could not get Transport zone with")
+    param = {'zone-id': get_id(client, data)}
+    request = client.__getattr__(MODULE).GetTransportZone(**param)
+    tz, _ = request.result()
 
     for key in data.keys():
         if key == 'display_name' or key == 'id':
@@ -81,28 +65,12 @@ def _update_tz(client, data):
         tz[key] = data[key]
 
     param = {'zone-id': tz['id'], 'TransportZone': tz}
-    request = client.__getattr__(
-        'Network Transport').UpdateTransportZone(**param)
-    try:
-        response, _ = request.result()
-    except:
-        logger.error("Could not update transport zone")
-        return []
+    request = client.__getattr__(MODULE).UpdateTransportZone(**param)
+    response, _ = request.result()
     return response
 
 
-def _get_tzid(client, param):
-    if param.has_key('id'):
-        return param['id']
-    elif param.has_key('display_name'):
-        tzs = get_list(client)
-        for tz in tzs:
-            if tz['display_name'] == param['display_name']:
-                return tz['id']
-    return None
-
-
-def _delete_tz(client, data):
+def delete(client, data):
     """
     This function returns deleted TZ in NSX
     :param client: bravado client for NSX
@@ -110,23 +78,30 @@ def _delete_tz(client, data):
              and item 1 containing the IPset id as string. The second item contains a list of dictionaries containing
              all ipset details
     """
-    param = {'zone-id': _get_tzid(client, data)}
-    request = client.__getattr__(
-        'Network Transport').DeleteTransportZone(**param)
-    try:
-        response = request.result()
-    except:
-        logger.error("Could not delete transport zone with %s" %
-                     oid)
-        return []
+    param = {'zone-id': get_id(client, data)}
+    request = client.__getattr__(MODULE).DeleteTransportZone(**param)
+    response = request.result()
     return response
 
 
+def exist(client, data):
+    if get_id(client, data):
+        return True
+    else:
+        return False
+
+
 def run(client, action, data):
-    logger.info('TransportZone ' + action)
+    logger.info(OBJECT + ' ' + action)
     if action == 'create':
-        return _create_tz(client, data)
+        if exist(client, data):
+            logger.error('Already exist')
+        else:
+            return create(client, data)
     elif action == 'update':
-        return _update_tz(client, data)
+        return update(client, data)
     elif action == 'delete':
-        return _delete_tz(client, data)
+        if exist(client, data):
+            return delete(client, data)
+        else:
+            logger.error('Not exist')

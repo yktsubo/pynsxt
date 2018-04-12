@@ -1,17 +1,4 @@
-#!/usr/bin/env python
-
-import argparse
-import subprocess
-import requests
-import time
-import json
-from pprint import pprint
-from pynsxt_utils import is_uuid
-from nsx_edge import list_edge_cluster
 from logging import basicConfig, getLogger, DEBUG
-from argparse import RawTextHelpFormatter
-from tabulate import tabulate
-from pprint import pprint
 
 logger = getLogger(__name__)
 
