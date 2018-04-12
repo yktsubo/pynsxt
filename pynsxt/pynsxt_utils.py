@@ -8,12 +8,12 @@ import hashlib
 import os
 import pickle
 import time
+import base64
+import urllib2
+import uuid
 from pprint import pprint
 from bravado.client import SwaggerClient
 from bravado.requests_client import RequestsClient
-
-PYNSXTOBJFILE = '.pynsxt'
-SPEC_PATH = "/tmp/nsx_api.json"
 
 
 def load_configfile(args):
@@ -45,38 +45,27 @@ def exec_command(cli, cmd, display=False):
     return output
 
 
-def load_spec(manager):
-    raw_spec = requests.get("https://%s/api/v1/spec/openapi/nsx_api.json" %
-                            manager['ip'], auth=(manager['user'], manager['password']), verify=False).json()
-
-
-def api_request(args, method, uri, data=""):
-    config = load_configfile(args)
-    uri = "https://%s/" % config['nsxManager']['ip'] + uri
-    # headers = {'Content-Type': 'application/json'}
-    headers = {'Content-Type': 'application/json',
-               'Accept': 'application/json'}
-    auth = (config['nsxManager']['user'], config['nsxManager']['password'])
-    if method == 'get':
-        res = requests.get(uri, auth=auth, headers=headers, verify=False)
-    elif method == 'post':
-        res = requests.post(uri, auth=auth, headers=headers,
-                            data=data, verify=False)
-    elif method == 'delete':
-        res = requests.delete(uri, auth=auth, headers=headers,
-                              data=data, verify=False)
-    return (res.status_code, res.json())
-
-
 def get_api_client(config, validation=False):
     if config.has_key('client'):
         return config['client']
-    raw_spec = json.load(open(SPEC_PATH))
+
+    url = "https://%s/api/v1/spec/openapi/nsx_api.json" % config['nsxManager']['ip']
+    base64string = base64.encodestring(('%s:%s' % (
+        config['nsxManager']['username'], config['nsxManager']['password'])).encode("utf-8"))[:-1]
+    headers = {
+        "Authorization": "Basic %s" % base64string.decode("utf-8")
+    }
+    context = ssl.create_default_context()
+    context.check_hostname = False
+    context.verify_mode = ssl.CERT_NONE
+    req = urllib2.Request(url=url, headers=headers)
+    response = urllib2.urlopen(req, context=context)
+    raw_spec = json.loads(response.read())
     raw_spec['host'] = config['nsxManager']['ip']
     http_client = RequestsClient()
     http_client.session.verify = False
     http_client.set_basic_auth(
-        config['nsxManager']['ip'], config['nsxManager']['user'], config['nsxManager']['password'])
+        config['nsxManager']['ip'], config['nsxManager']['username'], config['nsxManager']['password'])
     config = {
         'also_return_response': True,
         'validate_swagger_spec': validation,
@@ -123,16 +112,9 @@ def convert_to_dict(model):
     return model
 
 
-def main():
-    args = get_args()
-    if args.debug:
-        basicConfig(level=DEBUG)
-    else:
-        basicConfig(level=INFO)
-    handler = StreamHandler()
-    logger.addHandler(handler)
-    args.func(args)
-
-
-if __name__ == '__main__':
-    main()
+def is_uuid(uuid):
+    try:
+        uuid.UUID(uuid)
+    except:
+        return False
+    return True

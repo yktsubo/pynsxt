@@ -44,7 +44,7 @@ def deploy_edge(args):
         cmd.append("--prop:nsx_hostname=%s" % edge['name'])
         cmd.append(edge['ova'])
         cmd.append("vi://%s:%s@%s/%s/host/%s" % (config['vcenter']['user'], config['vcenter']
-                                             ['password'], config['vcenter']['ip'],  edge['datacenter'], edge['cluster']))
+                                                 ['password'], config['vcenter']['ip'],  edge['datacenter'], edge['cluster']))
         logger.debug('Executing command: ' + " ".join(cmd))
         ret = subprocess.check_call(" ".join(cmd), shell=True)
         if ret != 0:
@@ -92,6 +92,22 @@ def _get_manager_status(edge):
     else:
         logger.warning('%s is not connected to manager', edge['ip'])
         edge['join_manager'] = False
+
+
+def list_edgenode(client):
+    request = client.__getattr__('Fabric').ListNodes(resource_type='EdgeNode')
+    try:
+        response, responseAdpter = request.result()
+    except:
+        logger.error("Could not get nodes")
+        return []
+    return response['results']
+
+
+def _list_edgenode(client, **kwargs):
+    node_list = list_edgenode(client)
+    _print_edgenode_tabulate(node_list)
+    pass
 
 
 def list_edge_cluster(client):
