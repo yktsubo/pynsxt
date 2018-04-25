@@ -12,6 +12,7 @@ import nsx_ippool
 import nsx_ipblock
 import nsx_dfw_section
 import nsx_logicalswitch
+import nsx_k8s
 import pynsxt_utils
 from pprint import pprint
 from logging import basicConfig, getLogger, StreamHandler, DEBUG, INFO
@@ -54,7 +55,8 @@ def _run(args):
         'IPPool': nsx_ippool,
         'IPBlock': nsx_ipblock,
         'DFWSection': nsx_dfw_section,
-        'LogicalSwitch': nsx_logicalswitch
+        'LogicalSwitch': nsx_logicalswitch,
+        'K8s': nsx_k8s
     }
 
     config = pynsxt_utils.load_configfile(args)
@@ -70,8 +72,6 @@ def _run(args):
             data = t['data']
         else:
             data = {}
-        logger.info("%s:%s action:%s" %
-                    (t['module'], t['data']['display_name'], t['action']))
         response = module_selector[t['module']].run(client, t['action'], data)
         time.sleep(1)
 

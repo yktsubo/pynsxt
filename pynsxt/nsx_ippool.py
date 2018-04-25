@@ -34,6 +34,23 @@ def get_id(client, data):
     return None
 
 
+def get(client, data):
+    param = {'pool-id': get_id(client, data)}
+    request = client.__getattr__(MODULE).ReadIpPool(**param)
+    response, _ = request.result()
+    return response
+
+
+def update(client, data):
+    param = {
+        'pool-id': get_id(client, data),
+        'IpPool': data
+    }
+    request = client.__getattr__(MODULE).UpdateIpPool(**param)
+    response, _ = request.result()
+    return response
+
+
 def create(client, data):
     """
     This function returns deleted ip pool found in NSX
@@ -70,8 +87,11 @@ def run(client, action, data):
         else:
             return create(client, data)
     elif action == 'update':
-        logger.error('Not implemented')
-        return None
+        if exist(client, data):
+            return update(client, data)
+        else:
+            logger.error('Not exist')
+            return None
     elif action == 'delete':
         if exist(client, data):
             return delete(client, data)

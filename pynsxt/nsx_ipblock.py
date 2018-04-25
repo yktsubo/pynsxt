@@ -14,6 +14,23 @@ def get_list(client):
     return response['results']
 
 
+def get(client, data):
+    param = {'block-id': get_id(client, data)}
+    request = client.__getattr__(MODULE).ReadIpBlock(**param)
+    response, _ = request.result()
+    return response
+
+
+def update(client, data):
+    param = {
+        'block-id': get_id(client, data),
+        'IpBlock': data
+    }
+    request = client.__getattr__(MODULE).UpdateIpBlock(**param)
+    response, _ = request.result()
+    return response
+
+
 def get_id(client, data):
     if data.has_key('id'):
         return data['id']
@@ -57,8 +74,11 @@ def run(client, action, data):
         else:
             return create(client, data)
     elif action == 'update':
-        logger.error('Not implemented')
-        return None
+        if exist(client, data):
+            return update(client, data)
+        else:
+            logger.error('Not exist')
+            return None
     elif action == 'delete':
         if exist(client, data):
             return delete(client, data)

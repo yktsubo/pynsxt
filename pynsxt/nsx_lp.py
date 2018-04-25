@@ -8,13 +8,16 @@ OBJECT = 'Logical Port'
 MODULE = 'Logical Switching'
 
 
-def get_list(client):
+def get_list(client, logical_switch_id=None):
     """
     This function returns all T0 logical routers in NSX
     :param client: bravado client for NSX
     :return: returns the list of logical routers
     """
-    request = client.__getattr__(MODULE).ListLogicalPorts()
+    param = {}
+    if logical_switch_id:
+        param['logical_switch_id'] = logical_switch_id
+    request = client.__getattr__(MODULE).ListLogicalPorts(**param)
     response, _ = request.result()
     return response['results']
 
@@ -28,6 +31,16 @@ def get_id(client, data):
             if obj['display_name'] == data['display_name']:
                 return obj['id']
     return None
+
+
+def update(client, data):
+    param = {
+        'lport-id': get_id(client, data),
+        'LogicalPort': data
+    }
+    request = client.__getattr__(MODULE).UpdateLogicalPort(**param)
+    response, _ = request.result()
+    return response
 
 
 def create(client, data):

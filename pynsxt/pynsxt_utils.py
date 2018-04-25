@@ -118,3 +118,24 @@ def is_uuid(uuid):
     except:
         return False
     return True
+
+
+def has_tag(obj, tag):
+    if obj['tags']:
+        matched_tag = [t for t in obj['tags'] if t['scope'] == tag['scope']]
+        if len(matched_tag) == 1 and matched_tag[0]['tag'] == tag['tag']:
+            return True
+    return False
+
+
+def add_or_update_tag(obj, tag):
+    if not obj['tags']:
+        obj['tags'] = []
+    matched_tag = [t for t in obj['tags'] if t['scope'] == tag['scope']]
+    if len(matched_tag) == 0:
+        obj['tags'].append(tag)
+    else:
+        for t in obj['tags']:
+            if t['scope'] == tag['scope']:
+                t['tag'] = tag['tag']
+    return obj
