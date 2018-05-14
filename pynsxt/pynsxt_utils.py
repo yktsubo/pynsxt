@@ -27,7 +27,7 @@ def connect_cli(config):
         return config['cli']
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(config['ip'], username=config['user'],
+    ssh.connect(config['ip'], username=config['username'],
                 password=config['password'], port=22, timeout=15.0, look_for_keys=False)
     config['cli'] = ssh
     return ssh

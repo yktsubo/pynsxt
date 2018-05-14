@@ -1,9 +1,10 @@
 from logging import basicConfig, getLogger, DEBUG
+from pynsxt_utils import get_thumbprint
 
 logger = getLogger(__name__)
 
-OBJECT = 'Transport Zone'
-MODULE = 'Network Transport'
+OBJECT = 'Fabric Node'
+MODULE = 'Fabric'
 
 
 def get_id(client, data):
@@ -19,21 +20,21 @@ def get_id(client, data):
 
 def get_list(client):
     """
-    This function returns all TZ in NSX
+    This function returns all fabric host nodes in NSX
     :param client: bravado client for NSX
     :return: returns a tuple, the first item is a list of tuples with item 0 containing the IPset Name as string
              and item 1 containing the IPset id as string. The second item contains a list of dictionaries containing
              all ipset details
     """
 
-    request = client.__getattr__(MODULE).ListTransportZones()
+    request = client.__getattr__(MODULE).ListNodes(resource_type='HostNode')
     response, _ = request.result()
     return response['results']
 
 
 def get(client, data):
-    param = {'zone-id': get_id(client, data)}
-    request = client.__getattr__(MODULE).GetTransportZone(**param)
+    param = {'node-id': get_id(client, data)}
+    request = client.__getattr__(MODULE).ReadNode(**param)
     response, _ = request.result()
     return response
 
@@ -46,10 +47,18 @@ def create(client, data):
              and item 1 containing the IPset id as string. The second item contains a list of dictionaries containing
              all ipset details
     """
-    param = {'TransportZone': data}
-    request = client.__getattr__(MODULE).CreateTransportZone(**param)
-    response, _ = request.result()
-    return response
+    param = {'Node': {}}
+    param['Node']['display_name'] = data['display_name']
+    param['Node']['ip_addresses'] = [data['ip']]
+    param['Node']['os_type'] = data['os_type']
+    param['Node']['host_credential'] = {
+        username = data['username']
+        password = data['password']
+        thumbprint = get_thumbprint(data['ip'])}
+    print(param)
+    # request = client.__getattr__(MODULE).CreateTransportZone(**param)
+    # response, _ = request.result()
+    # return response
 
 
 def update(client, data):

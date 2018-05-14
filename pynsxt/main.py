@@ -5,6 +5,10 @@ import time
 import nsx_manager
 import nsx_controller
 import nsx_edge
+import nsx_edgecluster
+import nsx_hostnode
+import nsx_transportnode
+import nsx_uplinkprofile
 import nsx_tz
 import nsx_t0lr
 import nsx_t1lr
@@ -49,7 +53,11 @@ def _run(args):
         'Manager': nsx_manager,
         'Controller': nsx_controller,
         'Edge': nsx_edge,
+        'EdgeCluster': nsx_edgecluster,
         'TransportZone': nsx_tz,
+        'HostNode': nsx_hostnode,
+        'TransportNode': nsx_transportnode,
+        'UplinkProfile': nsx_uplinkprofile,
         'T0': nsx_t0lr,
         'T1': nsx_t1lr,
         'IPPool': nsx_ippool,
@@ -72,7 +80,9 @@ def _run(args):
             data = t['data']
         else:
             data = {}
-        response = module_selector[t['module']].run(client, t['action'], data)
+
+        response = module_selector[t['module']].run(
+            client, t['action'], data, config=config['env'])
         time.sleep(1)
 
 

@@ -75,7 +75,7 @@ def exist(client, data):
         return False
 
 
-def run(client, action, data):
+def run(client, action, data, config=None):
     if action == 'create':
         if exist(client, data):
             logger.error('Already exist')

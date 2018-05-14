@@ -7,62 +7,21 @@ import time
 import re
 
 from pynsxt_utils import load_configfile, connect_cli, exec_command
-
 from nsx_manager import get_thumbprint
 from logging import basicConfig, getLogger, DEBUG
 
 logger = getLogger(__name__)
 
 
-def deploy_controller(args):
-    config = load_configfile(args)
-    logger.info('Deploy NSX Controller')
-    for controller in config['nsxController']:
-        # Create deploy command
-        cmd = ["ovftool"]
-        cmd.append("--name=%s" % controller['name'])
-        cmd.append("--X:injectOvfEnv")
-        cmd.append("--allowExtraConfig")
-        cmd.append("--datastore=%s" % controller['datastore'])
-        cmd.append("--network=%s" % controller['network'])
-        cmd.append("--acceptAllEulas")
-        cmd.append("--noSSLVerify")
-        cmd.append("--diskMode=thin")
-        cmd.append("--powerOn")
-        cmd.append("--prop:nsx_ip_0=%s" % controller['ip'])
-        cmd.append("--prop:nsx_netmask_0=%s" % controller['netmask'])
-        cmd.append("--prop:nsx_gateway_0=%s" % controller['gw'])
-        cmd.append("--prop:nsx_dns1_0=%s" % config['dns'])
-        cmd.append("--prop:nsx_domain_0=%s" % config['domain'])
-        cmd.append("--prop:nsx_ntp_0=%s" % config['ntp'])
-        cmd.append("--prop:nsx_isSSHEnabled=True")
-        cmd.append("--prop:nsx_allowSSHRootLogin=True")
-        cmd.append("--prop:nsx_passwd_0=%s" % controller['password'])
-        cmd.append("--prop:nsx_cli_passwd_0=%s" %
-                   controller['password'])
-        cmd.append("--prop:nsx_hostname=%s" % controller['name'])
-        cmd.append(controller['ova'])
-        cmd.append("vi://%s:%s@%s/%s/host/%s" % (config['vcenter']['user'], config['vcenter']
-                                             ['password'], config['vcenter']['ip'], controller['datacenter'], controller['cluster']))
-        logger.debug('Executing command: ' + " ".join(cmd))
-        ret = subprocess.check_call(" ".join(cmd), shell=True)
-        if ret != 0:
-            logger.error('Failed to deploy')
-            return
-    logger.info('Deployed successfully')
-    pass
-
-
-def join_manager(args):
-    config = load_configfile(args)
-    thumbprint = get_thumbprint(args)
+def join_manager(client, data, config):
+    thumbprint = get_thumbprint(config)
     logger.info('Join controller with manager')
     for controller in config['nsxController']:
         connect_cli(controller)
         _get_manager_status(controller)
         if not controller['join_manager']:
             stdin, stdout, stderr = controller['cli'].exec_command(
-                "join management-plane %s username %s password %s thumbprint %s" % (config['nsxManager']['ip'], config['nsxManager']['user'], config['nsxManager']['password'], thumbprint))
+                "join management-plane %s username %s password %s thumbprint %s" % (config['nsxManager']['ip'], config['nsxManager']['username'], config['nsxManager']['password'], thumbprint))
             for line in stdout:
                 if len(line.strip()) == 0:
                     continue
@@ -73,8 +32,7 @@ def join_manager(args):
     return
 
 
-def initialize(args):
-    config = load_configfile(args)
+def initialize(client, data, config):
     for controller in config['nsxController']:
         connect_cli(controller)
         _get_cluster_status(controller)
@@ -218,26 +176,8 @@ def _get_slaves(config):
     return slaves
 
 
-def construct_parser(subparsers):
-    controller_parser = subparsers.add_parser('controller', description="Functions for NSX controller",
-                                              help="Functions for NSX controller")
-    controller_subparsers = controller_parser.add_subparsers()
-    controller_deploy_parser = controller_subparsers.add_parser(
-        'deploy', help='Deploy NSX-T controller')
-    controller_deploy_parser.set_defaults(func=deploy_controller)
-
-    controller_join_manager_parser = controller_subparsers.add_parser(
-        'join_manager', help='Join with NSX manager')
-    controller_join_manager_parser.set_defaults(func=join_manager)
-
-    controller_status_parser = controller_subparsers.add_parser(
-        'status', help='Status of NSX controller')
-    controller_status_parser.set_defaults(func=get_status)
-
-    controller_initialize_parser = controller_subparsers.add_parser(
-        'initialize', help='Initialize NSX controller')
-    controller_initialize_parser.set_defaults(func=initialize)
-
-    controller_join_cluster_parser = controller_subparsers.add_parser(
-        'join_cluster', help='Join NSX controller to master node')
-    controller_join_cluster_parser.set_defaults(func=join_cluster)
+def run(client, action, data, config=None):
+    if action == 'join_manager':
+        return join_manager(client, data, config)
+    elif action == 'initialize':
+        return initialize(client, data, config)

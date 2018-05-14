@@ -1,0 +1,31 @@
+env:
+  nsxManager:
+    ip: '10.16.181.153'
+    username: 'admin'    
+    password: 'VMware1!' 
+  nsxController:
+    - ip: '10.16.181.154'
+      username: 'admin'    
+      password: 'VMware1!'
+      secret: 'VMware1!'
+  nsxEdge:
+    - ip: '10.16.181.157'
+      username: 'admin'    
+      password: 'VMware1!' 
+      
+# action: create,update,delete
+    
+tasks:
+tasks:
+  - module: 'K8s'
+    action: 'update'
+    data:
+      validate:
+        fix: true
+        cluster_name: 'k8s-cluster1'
+        k8s_transport_ls: 'k8s-transport'
+        nodes:
+          - 'k8s-master'
+          - 'k8s-node1'
+          - 'k8s-node2'
+          - 'k8s-node3'         

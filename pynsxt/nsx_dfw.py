@@ -55,7 +55,7 @@ def _delete_ipblock(client, data):
     return response
 
 
-def run(client, action, data):
+def run(client, action, data, config=None):
     logger.info(OBJECT + ' ' + action)
     if action == 'create':
         return _create_ipblock(client, data)

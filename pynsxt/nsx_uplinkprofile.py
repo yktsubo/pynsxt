@@ -2,7 +2,7 @@ from logging import basicConfig, getLogger, DEBUG
 
 logger = getLogger(__name__)
 
-OBJECT = 'Transport Zone'
+OBJECT = 'Uplink Profile'
 MODULE = 'Network Transport'
 
 
@@ -19,53 +19,50 @@ def get_id(client, data):
 
 def get_list(client):
     """
-    This function returns all TZ in NSX
+    This function returns all uplink profile in NSX
     :param client: bravado client for NSX
     :return: returns a tuple, the first item is a list of tuples with item 0 containing the IPset Name as string
              and item 1 containing the IPset id as string. The second item contains a list of dictionaries containing
              all ipset details
     """
 
-    request = client.__getattr__(MODULE).ListTransportZones()
+    request = client.__getattr__(MODULE).ListHostSwitchProfiles()
     response, _ = request.result()
     return response['results']
 
 
 def get(client, data):
-    param = {'zone-id': get_id(client, data)}
-    request = client.__getattr__(MODULE).GetTransportZone(**param)
+    param = {'host-switch-profile-id': get_id(client, data)}
+    request = client.__getattr__(MODULE).GetHostSwitchProfile(**param)
     response, _ = request.result()
     return response
 
 
 def create(client, data):
     """
-    This function returns alled TZ in NSX
+    This function returns uplink profile in NSX
     :param client: bravado client for NSX
     :return: returns a tuple, the first item is a list of tuples with item 0 containing the IPset Name as string
              and item 1 containing the IPset id as string. The second item contains a list of dictionaries containing
              all ipset details
     """
-    param = {'TransportZone': data}
-    request = client.__getattr__(MODULE).CreateTransportZone(**param)
-    response, _ = request.result()
-    return response
+    hostswitchprofile = {}
+    hostswitchprofile['display_name'] = data['display_name']
+    hostswitchprofile['mtu'] = data['mtu']
+    hostswitchprofile['transport_vlan'] = data['transport_vlan']
+    hostswitchprofile['resource_type'] = 'UplinkHostSwitchProfile'
+    hostswitchprofile['teaming'] = {'active_list': [],
+                                    'standby_list': [], 'policy': data['teaming_policy']}
+    for uplink in data['active_uplink']:
+        hostswitchprofile['teaming']['active_list'].append({'uplink_name': uplink,
+                                                            'uplink_type': 'PNIC'})
+    if data.has_key('standby_uplink'):
+        for uplink in data['standby_uplink']:
+            hostswitchprofile['teaming']['standby_list'].append({'uplink_name': uplink,
+                                                                 'uplink_type': 'PNIC'})
 
-
-def update(client, data):
-    """
-    """
-    param = {'zone-id': get_id(client, data)}
-    request = client.__getattr__(MODULE).GetTransportZone(**param)
-    tz, _ = request.result()
-
-    for key in data.keys():
-        if key == 'display_name' or key == 'id':
-            continue
-        tz[key] = data[key]
-
-    param = {'zone-id': tz['id'], 'TransportZone': tz}
-    request = client.__getattr__(MODULE).UpdateTransportZone(**param)
+    param = {'BaseHostSwitchProfile': hostswitchprofile}
+    request = client.__getattr__(MODULE).CreateHostSwitchProfile(**param)
     response, _ = request.result()
     return response
 
@@ -78,8 +75,8 @@ def delete(client, data):
              and item 1 containing the IPset id as string. The second item contains a list of dictionaries containing
              all ipset details
     """
-    param = {'zone-id': get_id(client, data)}
-    request = client.__getattr__(MODULE).DeleteTransportZone(**param)
+    param = {'host-switch-profile-id': get_id(client, data)}
+    request = client.__getattr__(MODULE).DeleteHostSwitchProfile(**param)
     response = request.result()
     return response
 
@@ -98,8 +95,6 @@ def run(client, action, data, config=None):
             logger.error('Already exist')
         else:
             return create(client, data)
-    elif action == 'update':
-        return update(client, data)
     elif action == 'delete':
         if exist(client, data):
             return delete(client, data)

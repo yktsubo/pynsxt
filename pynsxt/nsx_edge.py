@@ -15,59 +15,15 @@ OBJECT = 'Edge'
 MODULE = 'Fabric'
 
 
-def deploy_edge(args):
-    config = load_configfile(args)
-    logger.info('Deploy NSX Edge')
-    for edge in config['nsxEdge']:
-        # Create deploy command
-        cmd = ["ovftool"]
-        cmd.append("--name=%s" % edge['name'])
-        cmd.append("--deploymentOption=%s" % edge['deploymentOption'])
-        cmd.append("--X:injectOvfEnv")
-        cmd.append("--allowExtraConfig")
-        cmd.append("--datastore=%s" % edge['datastore'])
-        cmd.append("--net:\"Network 0=%s\"" % edge['network0'])
-        cmd.append("--net:\"Network 1=%s\"" % edge['network1'])
-        cmd.append("--net:\"Network 2=%s\"" % edge['network2'])
-        cmd.append("--net:\"Network 3=%s\"" % edge['network3'])
-        cmd.append("--acceptAllEulas")
-        cmd.append("--noSSLVerify")
-        cmd.append("--diskMode=thin")
-        cmd.append("--powerOn")
-        cmd.append("--prop:nsx_ip_0=%s" % edge['ip'])
-        cmd.append("--prop:nsx_netmask_0=%s" % edge['netmask'])
-        cmd.append("--prop:nsx_gateway_0=%s" % edge['gw'])
-        cmd.append("--prop:nsx_dns1_0=%s" % config['dns'])
-        cmd.append("--prop:nsx_domain_0=%s" % config['domain'])
-        cmd.append("--prop:nsx_ntp_0=%s" % config['ntp'])
-        cmd.append("--prop:nsx_isSSHEnabled=True")
-        cmd.append("--prop:nsx_allowSSHRootLogin=True")
-        cmd.append("--prop:nsx_passwd_0=%s" % edge['password'])
-        cmd.append("--prop:nsx_cli_passwd_0=%s" %
-                   edge['password'])
-        cmd.append("--prop:nsx_hostname=%s" % edge['name'])
-        cmd.append(edge['ova'])
-        cmd.append("vi://%s:%s@%s/%s/host/%s" % (config['vcenter']['user'], config['vcenter']
-                                                 ['password'], config['vcenter']['ip'],  edge['datacenter'], edge['cluster']))
-        logger.debug('Executing command: ' + " ".join(cmd))
-        ret = subprocess.check_call(" ".join(cmd), shell=True)
-        if ret != 0:
-            logger.error('Failed to deploy')
-            return
-    logger.info('Deployed successfully')
-    pass
-
-
-def join_manager(args):
-    config = load_configfile(args)
-    thumbprint = get_thumbprint(args)
+def join_manager(client, data, config):
+    thumbprint = get_thumbprint(config)
     logger.info('Join edge with manager')
     for edge in config['nsxEdge']:
         connect_cli(edge)
         _get_manager_status(edge)
         if not edge['join_manager']:
             stdin, stdout, stderr = edge['cli'].exec_command(
-                "join management-plane %s username %s password %s thumbprint %s" % (config['nsxManager']['ip'], config['nsxManager']['user'],  config['nsxManager']['password'], thumbprint))
+                "join management-plane %s username %s password %s thumbprint %s" % (config['nsxManager']['ip'], config['nsxManager']['username'],  config['nsxManager']['password'], thumbprint))
             for line in stdout:
                 if len(line.strip()) == 0:
                     continue
@@ -127,3 +83,8 @@ def get_memberid(client, data, edgecluster=None):
             for edge in edge_cluster['members']:
                 if edge['transport_node_id'] == get_id(client, data):
                     return edge['member_index']
+
+
+def run(client, action, data, config=None):
+    if action == 'join_manager':
+        return join_manager(client, data, config)

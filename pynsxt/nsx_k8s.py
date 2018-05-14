@@ -60,59 +60,6 @@ def delete(client, data):
 
 def validate(client, data, fix=False):
     cluster_tag = {'scope': 'ncp/cluster', 'tag': data['cluster_name']}
-    tag_checklist = {
-        'tz': nsx_tz,
-        't0': nsx_t0lr
-    }
-    for key in tag_checklist.keys():
-        _tag_check(client, data, key, tag_checklist[key], fix=fix)
-
-    # IP block
-    obj_data = {'display_name': data['ipblock']['name']}
-
-    if nsx_ipblock.exist(client, obj_data):
-        obj_data = nsx_ipblock.get(client, obj_data)
-        if has_tag(obj_data, cluster_tag):
-            logger.info('ipblock has tag')
-        else:
-            logger.warning('ipblock does not have tag')
-            if fix:
-                obj_data = add_or_update_tag(obj_data, cluster_tag)
-                nsx_ipblock.update(client, obj_data)
-    else:
-        logger.error('ipblock does not exist')
-        if fix:
-            obj_data['cidr'] = data['ipblock']['cidr']
-            obj_data['tags'] = [cluster_tag]
-            if data['ipblock']['no_snat']:
-                obj_data['tags'].append(
-                    {'scope': 'ncp/no_snat', 'tag': 'true'})
-            nsx_ipblock.create(client, obj_data)
-
-    # IP pool
-    obj_data = {'display_name': data['ippool']['name']}
-    if nsx_ippool.exist(client, obj_data):
-        obj_data = nsx_ippool.get(client, obj_data)
-        if has_tag(obj_data, cluster_tag):
-            logger.info('ippool has tag')
-        else:
-            logger.warning('ippool does not have tag')
-            if fix:
-                obj_data = add_or_update_tag(obj_data, cluster_tag)
-                nsx_ippool.update(client, obj_data)
-    else:
-        logger.error('ipblock does not exist')
-        if fix:
-            obj_data['subnets'] = [{'allocation_ranges':
-                                    [
-                                        {'start': data['ippool']['start'],
-                                         'end': data['ippool']['end']}
-                                    ],
-                                    'cidr':data['ippool']['cidr']}]
-            obj_data['tags'] = [cluster_tag]
-            obj_data['tags'].append({'scope': 'ncp/external', 'tag': 'true'})
-            nsx_ippool.create(client, obj_data)
-
     obj_data = {'display_name': data['k8s_transport_ls']}
     if nsx_logicalswitch.exist(client, obj_data):
         logger.info('K8s transport LS exists')
@@ -129,7 +76,6 @@ def validate(client, data, fix=False):
     vms = request.result()[0]['results']
     request = client.__getattr__('Fabric').ListVifs()
     vifs = request.result()[0]['results']
-
     for node in data['nodes']:
         vm_id = [vm['external_id'] for vm in vms if vm['display_name'] == node]
         if len(vm_id) == 1:
@@ -151,7 +97,7 @@ def validate(client, data, fix=False):
     pass
 
 
-def run(client, action, data):
+def run(client, action, data, config=None):
     if action == 'create':
         logger.error('Not implemented')
         return None
