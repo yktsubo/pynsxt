@@ -4,7 +4,7 @@ setup(
     name='pynsxt',
     version='0.1',
     packages=find_packages(),
-    install_requires=['requests', 'bravado_core.spec'],
+    install_requires=['requests', 'bravado-core'],
     entry_points={
             'console_scripts':
         'pynsxt = pynsxt.main:main'

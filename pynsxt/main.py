@@ -29,10 +29,6 @@ logger = getLogger(__name__)
 
 def get_args():
     parser = argparse.ArgumentParser(description='NSX-T Swagger wrapper')
-    parser.add_argument('-c',
-                        '--config-file',
-                        required=True,
-                        help='nsxt configuration file')
 
     parser.add_argument('--spec-validation',
                         default=False,
@@ -44,6 +40,12 @@ def get_args():
                         default=False,
                         action='store_true',
                         help='print low level debug of http transactions')
+
+    parser.add_argument('-c',
+                        '--config-file',
+                        required=True,
+                        help='nsxt configuration file')
+
     parser.set_defaults(func=_run)
     return parser.parse_args()
 
