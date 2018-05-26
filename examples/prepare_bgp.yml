@@ -1,0 +1,56 @@
+env:
+  nsxManager:
+    ip: '192.168.172.39'
+    username: 'admin'    
+    password: 'VMware1!' 
+      
+# action: create,update,delete
+    
+tasks:
+  - module: 'T0'
+    action: 'update'
+    data:
+      target: 'bgp'
+      display_name: 'T0'
+      as_num: 100
+      ecmp: False
+      enabled: True
+      graceful_restart: False
+
+  - module: 'T0'
+    action: 'update'
+    data:
+      target: 'redistribution'
+      display_name: 'T0'      
+      bgp_enabled: True
+
+  - module: 'T0'
+    action: 'create'
+    data:
+      target: 'redistribution_rule'
+      display_name: 'T0'd
+      rule_name: 'Rest k8s route'
+      destination: "BGP"
+      sources:
+        # - 'NSX_CONNECTED'
+        # - 'NSX_STATIC'
+        - 'TIER0_NAT'
+        # - 'TIER1_NAT'
+        - 'TIER1_LB_VIP'
+        # - 'TIER1_LB_SNAT'
+        # - "STATIC"
+
+  # - module: 'T0'
+  #   action: 'delete'
+  #   data:
+  #     target: 'redistribution_rule'
+  #     display_name: 'T0'
+  #     rule_name: 'Rest k8s route'
+      
+  - module: 'T0'
+    action: 'create'
+    data:
+      display_name: 'T0'      
+      target: 'bgp_neighbor'
+      neighbor_address: '192.168.240.1'
+      remote_as: '200'
