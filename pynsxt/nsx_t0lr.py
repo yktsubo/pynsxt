@@ -120,9 +120,117 @@ def _delete_ha_vip_config(client, data):
     update(client, t0_routerconfig)
 
 
+def _add_bgp_neighbor(client,data):
+    t0lr = get(client, data)
+    param = {'logical-router-id': t0lr['id']}
+    request = client.__getattr__(MODULE).ListBgpNeighbors(**param)
+    response, _ = request.result()
+    bgp_neighbors = response['results']
+    target_neighbors = [ n for n in bgp_neighbors if n['neighbor_address'] == data['neighbor_address']]
+    if len(target_neighbors) > 0:
+        return False
+    
+    if isinstance(data['remote_as_num'], int):
+        data['remote_as_num'] = int(data['remote_as_num'])
+        
+    param['BgpNeighbor'] = {}
+    param['BgpNeighbor']['neighbor_address'] = data['neighbor_address']
+    param['BgpNeighbor']['remote_as_num'] = data['remote_as_num']
+    request = client.__getattr__(MODULE).AddBgpNeighbor(**param)
+    response, _ = request.result()
+    return response
+
+def _delete_bgp_neighbor(client,data):
+    t0lr = get(client, data)
+    param = {'logical-router-id': t0lr['id']}
+    request = client.__getattr__(MODULE).ListBgpNeighbors(**param)
+    response, _ = request.result()
+    bgp_neighbors = response['results']
+    target_neighbors = [ n['id'] for n in bgp_neighbors if n['neighbor_address'] == data['neighbor_address']]
+    for target_neighbor in target_neighbors:
+        print target_neighbor
+        param = {'logical-router-id': t0lr['id'], 'id': target_neighbor}
+        request = client.__getattr__(MODULE).DeleteBgpNeighbor(**param)
+        response = request.result()
+    return None
+
+def _add_redistribution_rule(client,data):
+    t0lr = get(client, data)
+    param = {'logical-router-id': t0lr['id']}
+    request = client.__getattr__(MODULE).ReadRedistributionRuleList(**param)
+    restistribution_rule, _ = request.result()
+    target_redists = [ rule for rule in restistribution_rule['rules'] if rule['display_name'] == data['rule_name']]
+    if len(target_redists) > 0:
+        return False
+    
+    param['RedistributionRuleList'] = restistribution_rule
+    param['RedistributionRuleList']['rules'].append({
+        "display_name": data['rule_name'],
+        "destination": data['destination'],
+        "sources": data['sources']
+    })
+    
+    request = client.__getattr__(MODULE).UpdateRedistributionRuleList(**param)
+    response, _ = request.result()
+    return response
+
+def _delete_redistribution_rule(client,data):
+    t0lr = get(client, data)
+    param = {'logical-router-id': t0lr['id']}
+    request = client.__getattr__(MODULE).ReadRedistributionRuleList(**param)
+    restistribution_rule, _ = request.result()    
+    new_restistribution_rules = []
+    for rule in restistribution_rule['rules']:
+        if rule['display_name'] == data['rule_name']:
+            continue
+        new_restistribution_rules.append(rule)
+    param['RedistributionRuleList'] = restistribution_rule
+    param['RedistributionRuleList']['rules'] = new_restistribution_rules
+    request = client.__getattr__(MODULE).UpdateRedistributionRuleList(**param)
+    response, _ = request.result()
+    return response
+
+
+def _update_bgp(client, data):
+    t0lr = get(client, data)
+    param = {'logical-router-id': t0lr['id']}
+    request = client.__getattr__(MODULE).ReadBgpConfig(**param)
+    t0lr_bgp, _ = request.result()
+
+    if isinstance(data['as_num'], int):
+        data['as_num'] = int(data['as_num'])
+    param['BgpConfig'] = t0lr_bgp
+    param['BgpConfig']['as_num'] = data['as_num']
+    param['BgpConfig']['as_number'] = data['as_num']
+    param['BgpConfig']['ecmp'] = data['ecmp']
+    param['BgpConfig']['enabled'] = data['enabled']
+    param['BgpConfig']['graceful_restart'] =  data['graceful_restart']
+    request = client.__getattr__(MODULE).UpdateBgpConfig(**param)
+    response, _ = request.result()
+    return response
+
+def _update_redistribution(client, data):
+    t0lr = get(client, data)
+    param = {'logical-router-id': t0lr['id']}
+    request = client.__getattr__(MODULE).ReadRedistributionConfig(**param)
+    t0lr_redist, _ = request.result()
+
+    param['RedistributionConfig'] = t0lr_redist
+    param['RedistributionConfig']['bgp_enabled'] = data['bgp_enabled']
+    
+    request = client.__getattr__(MODULE).UpdateRedistributionConfig(**param)
+    response, _ = request.result()
+    return response
+    
 def _create_uplink(client, data):
     res = []
     t0_id = get_id(client, data)
+    t0_uplinks = nsx_lrp.get_list(client, logical_router_id=t0_id)
+
+    if data['create_uplink']['display_name'] in [u['display_name'] for u in t0_uplinks]:
+        logger.error('Uplink Already exist')
+        return None
+    
     ls_id = nsx_logicalswitch.get_id(
         client, {'display_name': data['create_uplink']['ls']})
 
@@ -199,12 +307,35 @@ def exist(client, data):
 
 
 def run(client, action, data, config=None):
+    
     if action == 'create':
+        if data.has_key('target') and data['target'] == 'bgp_neighbor':
+            return _add_bgp_neighbor(client,data)
+        elif data.has_key('target') and data['target'] == 'redistribution_rule':
+            return _add_redistribution_rule(client,data)
+        
         if exist(client, data):
             logger.error('Already exist')
         else:
             return create(client, data)
+    elif action == 'delete':
+        if data.has_key('target') and data['target'] == 'bgp_neighbor':
+            return _delete_bgp_neighbor(client,data)
+        
+        elif data.has_key('target') and data['target'] == 'redistribution_rule':
+            return _delete_redistribution_rule(client,data)
+        
+        if exist(client, data):
+            return delete(client, data)
+        else:
+            logger.error('Not exist')
     elif action == 'update':
+        if data.has_key('target') and data['target'] == 'bgp':
+            return _update_bgp(client, data)
+
+        if data.has_key('target') and data['target'] == 'redistribution':
+            return _update_redistribution(client, data)
+        
         if data.has_key('create_uplink'):
             return _create_uplink(client, data)
         elif data.has_key('add_static_route'):
@@ -214,8 +345,5 @@ def run(client, action, data, config=None):
         else:
             logger.error('Not implemented')
             return None
-    elif action == 'delete':
-        if exist(client, data):
-            return delete(client, data)
-        else:
-            logger.error('Not exist')
+    elif action == 'bgp':
+        return _update_bgp(client, data)        

@@ -18,12 +18,12 @@ env:
       
 # action: create,update,delete
 tasks:
-  - module: 'Controller'
-    action: 'join_manager'
-  - module: 'Edge'
-    action: 'join_manager'
-  - module: 'Controller'
-    action: 'initialize'
+  # - module: 'Controller'
+  #   action: 'join_manager'
+  # - module: 'Edge'
+  #   action: 'join_manager'
+  # - module: 'Controller'
+  #   action: 'initialize'
   - module: 'IPPool'
     action: 'create'
     data:
@@ -78,7 +78,7 @@ tasks:
     data:
       display_name: 'esxi-profile'
       mtu: 1600
-      transport_vlan: 891      
+      transport_vlan: 0
       active_uplink:
         - 'uplink0'
       teaming_policy: 'FAILOVER_ORDER'
@@ -117,6 +117,7 @@ tasks:
             uplink0: 'vmnic1'
           ip_assignment:
             ippool: 'tep-for-esxi'
+
   - module: 'TransportNode'
     action: 'create'
     data:
@@ -163,7 +164,7 @@ tasks:
           uplink_profile: 'edge-profile'
           uplink_mapping:
             uplink0: 'fp-eth1'
-            
+          
   - module: 'EdgeCluster'
     action: 'create'
     data:

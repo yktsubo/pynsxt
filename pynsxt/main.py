@@ -18,6 +18,7 @@ import nsx_dfw
 import nsx_dfw_section
 import nsx_logicalswitch
 import nsx_k8s
+import nsx_nat
 import pynsxt_utils
 from pprint import pprint
 from logging import basicConfig, getLogger, StreamHandler, captureWarnings, DEBUG, INFO
@@ -63,6 +64,7 @@ def _run(args):
         'UplinkProfile': nsx_uplinkprofile,
         'T0': nsx_t0lr,
         'T1': nsx_t1lr,
+        'NAT': nsx_nat,
         'IPPool': nsx_ippool,
         'IPBlock': nsx_ipblock,
         'DFW': nsx_dfw,

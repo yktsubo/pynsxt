@@ -3,25 +3,10 @@ env:
     ip: '10.16.181.53'
     username: 'admin'    
     password: 'VMware1!' 
-  nsxController:
-    - ip: '10.16.181.154'
-      username: 'admin'    
-      password: 'VMware1!'
-      secret: 'VMware1!'
-  nsxEdge:
-    - ip: '10.16.181.157'
-      username: 'admin'    
-      password: 'VMware1!' 
       
 # action: create,update,delete
     
 tasks:
-  - module: 'LogicalSwitch'
-    action: 'create'
-    data:
-      display_name: 'k8s-mgmt'
-      transport_zone_id: 'OverlayTZ'
-
   - module: 'LogicalSwitch'
     action: 'create'
     data:
@@ -33,7 +18,7 @@ tasks:
     data:
       display_name: 'ExternalLS'
       transport_zone_id: 'VlanTZ'
-      vlan: '893'
+      vlan: '0'
 
   - module: 'T0'
     action: 'create'
@@ -66,15 +51,15 @@ tasks:
         prefix_length: '24'
         edge_node: 'nsxe-site3-02'
 
-  - module: 'T0'
-    action: 'update'
-    data:
-      display_name: 'T0'
-      add_static_route:
-        network: '0.0.0.0/0'
-        next_hops:
-          - administrative_distance: '1'
-            ip_address: '192.168.12.254'
+  # - module: 'T0'
+  #   action: 'update'
+  #   data:
+  #     display_name: 'T0'
+  #     add_static_route:
+  #       network: '0.0.0.0/0'
+  #       next_hops:
+  #         - administrative_distance: '1'
+  #           ip_address: '192.168.12.254'
 
   - module: 'T0'
     action: 'update'
@@ -87,18 +72,18 @@ tasks:
           - 'Uplink1'
           - 'Uplink2'
   
-  - module: 'T1'
-    action: 'create'
-    data:
-      display_name: 'T1-k8smgmt'
-      failover_mode: 'PREEMPTIVE'
-      router_type: 'TIER1'
+  # - module: 'T1'
+  #   action: 'create'
+  #   data:
+  #     display_name: 'T1-k8smgmt'
+  #     failover_mode: 'PREEMPTIVE'
+  #     router_type: 'TIER1'
 
-  - module: 'T1'
-    action: 'update'
-    data:
-      display_name: 'T1-k8smgmt'      
-      connect_to_T0: 'T0'
+  # - module: 'T1'
+  #   action: 'update'
+  #   data:
+  #     display_name: 'T1-k8smgmt'      
+  #     connect_to_T0: 'T0'
 
 
   - module: 'T1'
@@ -110,13 +95,13 @@ tasks:
         ip_address: '192.168.13.254'
         prefix_length: '24'
 
-  - module: 'T1'
-    action: 'update'
-    data:
-      display_name: 'T1-k8smgmt'            
-      advertisement:
-        enabled: 'True'
-        advertise_nsx_connected_routes: 'True'
+  # - module: 'T1'
+  #   action: 'update'
+  #   data:
+  #     display_name: 'T1-k8smgmt'            
+  #     advertisement:
+  #       enabled: 'True'
+  #       advertise_nsx_connected_routes: 'True'
       
   - module: 'IPPool'
     action: 'create'
