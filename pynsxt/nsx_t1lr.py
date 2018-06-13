@@ -50,6 +50,13 @@ def create(client, data):
 def _connect_to_t0lr(client, data):
     t0_id = nsx_t0lr.get_id(client, {'display_name': data['connect_to_T0']})
     t1_id = get_id(client, data)
+
+    t1_lrps = nsx_lrp.get_list(client, logical_router_id=t1_id)
+
+    if "Link_to_%s" % data['connect_to_T0'] in [lrp['display_name'] for lrp in t1_lrps]:
+        logger.error('T1 Already connected to T0')
+        return None
+    
     param = {
         'display_name': "Link_to_%s" % data['display_name'],
         'resource_type': 'LogicalRouterLinkPortOnTIER0',
@@ -73,6 +80,12 @@ def _connect_to_ls(client, data):
     ls_id = nsx_logicalswitch.get_id(
         client, {'display_name': data['connect_to_LS']['ls']})
 
+    t1_lrps = nsx_lrp.get_list(client, logical_router_id=t1_id)
+
+    if "Link_to_%s" % data['connect_to_LS']['ls'] in [lrp['display_name'] for lrp in t1_lrps]:
+        logger.error("T1 Already connected to %s" % data['connect_to_LS']['ls'])
+        return None
+    
     param = {
         'logical_switch_id': ls_id,
         'display_name': 'To_%s' % data['display_name'],
