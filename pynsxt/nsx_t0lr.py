@@ -211,6 +211,12 @@ def _update_redistribution(client, data):
 def _create_uplink(client, data):
     res = []
     t0_id = get_id(client, data)
+    t0_uplinks = nsx_lrp.get_list(client, logical_router_id=t0_id)
+
+    if data['create_uplink']['display_name'] in [u['display_name'] for u in t0_uplinks]:
+        logger.error('Uplink Already exist')
+        return None
+    
     ls_id = nsx_logicalswitch.get_id(
         client, {'display_name': data['create_uplink']['ls']})
 
