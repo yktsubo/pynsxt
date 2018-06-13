@@ -70,7 +70,7 @@ def _run(args):
         'DFW': nsx_dfw,
         'DFWSection': nsx_dfw_section,
         'LogicalSwitch': nsx_logicalswitch,
-        'K8s': nsx_k8s
+        'k8s': nsx_k8s
     }
 
     config = pynsxt_utils.load_configfile(args)
