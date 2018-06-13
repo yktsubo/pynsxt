@@ -1,21 +1,32 @@
 from logging import basicConfig, getLogger, DEBUG
+from pprint import pprint
 
 logger = getLogger(__name__)
 
-OBJECT = 'IP block'
-MODULE = 'Pool Management'
+OBJECT = 'DFW'
+MODULE = 'Services'
 
 
-def get_list(client):
+def get_list(client, sectionId=None):
     """
     """
-    request = client.__getattr__(MODULE).ListIpBlocks()
-    try:
+    if not sectionId:
+        request = client.__getattr__(MODULE).ListSections()
         response, _ = request.result()
-    except:
-        logger.error("Could not list " + OBJECT)
-        return []
-    return response['results']
+        sections = response['results']
+        for section in sections:
+            if section['applied_tos'] and section['applied_tos'][0]['target_type'] == 'LogicalRouter':
+                continue
+            param = {'section-id': section['id']}
+            request = client.__getattr__(MODULE).GetRules(**param)
+            response, _ = request.result()
+            rules = response['results']
+            pprint(section['display_name'])
+            for rule in rules:
+                pprint(rule['action'])
+                pprint(rule['direction'])
+                pprint(rule['sources'])
+                pprint(rule['destinations'])
 
 
 def _get_id(client, data):
@@ -56,6 +67,7 @@ def _delete_ipblock(client, data):
 
 
 def run(client, action, data, config=None):
+    get_list(client)
     logger.info(OBJECT + ' ' + action)
     if action == 'create':
         return _create_ipblock(client, data)

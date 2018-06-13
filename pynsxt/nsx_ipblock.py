@@ -14,6 +14,13 @@ def get_list(client):
     return response['results']
 
 
+def get_subnet_list(client, data):
+    param = {'block_id': get_id(client, data)}
+    request = client.__getattr__(MODULE).ListIpBlockSubnets(**param)
+    response, _ = request.result()
+    return response['results']
+
+
 def get(client, data):
     param = {'block-id': get_id(client, data)}
     request = client.__getattr__(MODULE).ReadIpBlock(**param)
@@ -42,6 +49,17 @@ def get_id(client, data):
     return None
 
 
+def get_subnet_id(client, data):
+    if data.has_key('id'):
+        return data['id']
+    elif data.has_key('display_name'):
+        objects = get_subnet_list(client)
+        for obj in objects:
+            if obj['display_name'] == data['display_name']:
+                return obj['id']
+    return None
+
+
 def create(client, data):
     """
     """
@@ -56,6 +74,15 @@ def delete(client, data):
     """
     param = {'block-id': get_id(client, data)}
     request = client.__getattr__(MODULE).DeleteIpBlock(**param)
+    response = request.result()
+    return response
+
+
+def delete_subnet(client, data):
+    """
+    """
+    param = {'subnet-id': get_subnet_id(client, data)}
+    request = client.__getattr__(MODULE).DeleteIpBlockSubnet(**param)
     response = request.result()
     return response
 

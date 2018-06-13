@@ -24,6 +24,13 @@ def get_list(client):
     return response['results']
 
 
+def get_nat_list(client, data):
+    param = {'logical-router-id': get_id(client, data)}
+    request = client.__getattr__(MODULE).ListNatRules(**param)
+    response, _ = request.result()
+    return response['results']
+
+
 def get_id(client, data):
     if data.has_key('id'):
         return data['id']
@@ -78,6 +85,13 @@ def delete(client, data):
 
     param = {'logical-router-id': get_id(client, data)}
     request = client.__getattr__(MODULE).DeleteLogicalRouter(**param)
+    response = request.result()
+    return response
+
+
+def delete_nat(client, data, nat):
+    param = {'logical-router-id': get_id(client, data), 'rule-id': nat['id']}
+    request = client.__getattr__(MODULE).DeleteNatRule(**param)
     response = request.result()
     return response
 

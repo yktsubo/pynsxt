@@ -2,14 +2,14 @@ from logging import basicConfig, getLogger, DEBUG
 
 logger = getLogger(__name__)
 
-OBJECT = 'DFW section'
-MODULE = 'Services'
+OBJECT = 'NS group'
+MODULE = 'Grouping Objects'
 
 
 def get_list(client):
     """
     """
-    request = client.__getattr__(MODULE).ListSections()
+    request = client.__getattr__(MODULE).ListNSGroups()
     response, _ = request.result()
     return response['results']
 
@@ -28,17 +28,18 @@ def get_id(client, data):
 def create(client, data):
     """
     """
-    param = {'FirewallSection': data}
-    request = client.__getattr__(MODULE).AddSection(**param)
-    response, _ = request.result()
-    return response
+    pass
+    # param = {'FirewallSection': data}
+    # request = client.__getattr__(MODULE).AddSection(**param)
+    # response, _ = request.result()
+    # return response
 
 
 def delete(client, data):
     """
     """
-    param = {'section-id': get_id(client, data), 'cascade': True}
-    request = client.__getattr__(MODULE).DeleteSection(**param)
+    param = {'ns-group-id': get_id(client, data)}
+    request = client.__getattr__(MODULE).DeleteNSGroup(**param)
     response = request.result()
     return response
 

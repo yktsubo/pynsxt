@@ -14,12 +14,13 @@ import nsx_t0lr
 import nsx_t1lr
 import nsx_ippool
 import nsx_ipblock
+import nsx_dfw
 import nsx_dfw_section
 import nsx_logicalswitch
 import nsx_k8s
 import pynsxt_utils
 from pprint import pprint
-from logging import basicConfig, getLogger, StreamHandler, DEBUG, INFO
+from logging import basicConfig, getLogger, StreamHandler, captureWarnings, DEBUG, INFO
 
 # For lab
 
@@ -64,9 +65,10 @@ def _run(args):
         'T1': nsx_t1lr,
         'IPPool': nsx_ippool,
         'IPBlock': nsx_ipblock,
+        'DFW': nsx_dfw,
         'DFWSection': nsx_dfw_section,
         'LogicalSwitch': nsx_logicalswitch,
-        'K8s': nsx_k8s
+        'k8s': nsx_k8s
     }
 
     config = pynsxt_utils.load_configfile(args)

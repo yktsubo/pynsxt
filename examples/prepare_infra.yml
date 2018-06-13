@@ -1,18 +1,18 @@
 env:
   nsxManager:
-    ip: '10.16.181.153'
+    ip: '10.16.181.53'
     username: 'admin'    
     password: 'VMware1!' 
   nsxController:
-    - ip: '10.16.181.154'
+    - ip: '10.16.181.54'
       username: 'admin'    
       password: 'VMware1!'
       secret: 'VMware1!'
   nsxEdge:
-    - ip: '10.16.181.157'
+    - ip: '10.16.181.57'
       username: 'admin'    
       password: 'VMware1!' 
-    - ip: '10.16.181.158'
+    - ip: '10.16.181.58'
       username: 'admin'    
       password: 'VMware1!' 
       
@@ -30,20 +30,10 @@ tasks:
       display_name: 'tep-for-esxi'
       subnets:
         - allocation_ranges:
-            - start: '192.168.10.101'
-              end: '192.168.10.200'
+            - start: '192.168.10.211'
+              end: '192.168.10.220'
           cidr: '192.168.10.0/24'
           gateway_ip: '192.168.10.254'          
-  - module: 'IPPool'
-    action: 'create'
-    data:
-      display_name: 'tep-for-edge'
-      subnets:
-        - allocation_ranges:
-            - start: '192.168.11.101'
-              end: '192.168.11.200'
-          cidr: '192.168.11.0/24'
-          gateway_ip: '192.168.11.254'
   - module: 'TransportZone'
     action: 'create'
     data:
@@ -61,25 +51,25 @@ tasks:
   - module: 'HostNode'
     action: 'create'
     data:
-      display_name: 'esxi-site3-04'
+      display_name: 'esxi-site3-01'
       os_type: 'ESXI'
-      ip: '10.16.181.66'      
+      ip: '10.16.181.59'      
       username: 'root'
       password: 'VMware1!'
   - module: 'HostNode'
     action: 'create'
     data:
-      display_name: 'esxi-site3-05'
+      display_name: 'esxi-site3-02'
       os_type: 'ESXI'
-      ip: '10.16.181.67'      
+      ip: '10.16.181.60'      
       username: 'root'
       password: 'VMware1!'
   - module: 'HostNode'
     action: 'create'
     data:
-      display_name: 'esxi-site3-06'
+      display_name: 'esxi-site3-03'
       os_type: 'ESXI'
-      ip: '10.16.181.69'      
+      ip: '10.16.181.61'      
       username: 'root'
       password: 'VMware1!'
 
@@ -91,8 +81,6 @@ tasks:
       transport_vlan: 891      
       active_uplink:
         - 'uplink0'
-      standby_uplink:
-        - 'uplink1'
       teaming_policy: 'FAILOVER_ORDER'
 
   - module: 'UplinkProfile'
@@ -100,7 +88,7 @@ tasks:
     data:
       display_name: 'edge-profile'
       mtu: 1600
-      transport_vlan: 892      
+      transport_vlan: 891
       active_uplink:
         - 'uplink0'
       teaming_policy: 'FAILOVER_ORDER'
@@ -108,8 +96,8 @@ tasks:
   - module: 'TransportNode'
     action: 'create'
     data:
-      display_name: 'esxi-site3-04'
-      node: 'esxi-site3-04'
+      display_name: 'esxi-site3-01'
+      node: 'esxi-site3-01'
       nvds:
         - tz: 'OverlayTZ'
           uplink_profile: 'esxi-profile'
@@ -120,8 +108,8 @@ tasks:
   - module: 'TransportNode'
     action: 'create'
     data:
-      display_name: 'esxi-site3-05'
-      node: 'esxi-site3-05'
+      display_name: 'esxi-site3-02'
+      node: 'esxi-site3-02'
       nvds:
         - tz: 'OverlayTZ'
           uplink_profile: 'esxi-profile'
@@ -132,8 +120,8 @@ tasks:
   - module: 'TransportNode'
     action: 'create'
     data:
-      display_name: 'esxi-site3-06'
-      node: 'esxi-site3-06'
+      display_name: 'esxi-site3-03'
+      node: 'esxi-site3-03'
       nvds:
         - tz: 'OverlayTZ'
           uplink_profile: 'esxi-profile'
@@ -145,15 +133,15 @@ tasks:
   - module: 'TransportNode'
     action: 'create'
     data:
-      display_name: 'nsxe-site4-01'
-      node: 'nsxe-site4-01'
+      display_name: 'nsxe-site3-01'
+      node: 'nsxe-site3-01'
       nvds:
         - tz: 'OverlayTZ'
           uplink_profile: 'edge-profile'
           uplink_mapping:
             uplink0: 'fp-eth0'
           ip_assignment:
-            ippool: 'tep-for-edge'
+            ippool: 'tep-for-esxi'            
         - tz: 'VlanTZ'
           uplink_profile: 'edge-profile'
           uplink_mapping:
@@ -162,15 +150,15 @@ tasks:
   - module: 'TransportNode'
     action: 'create'
     data:
-      display_name: 'nsxe-site4-02'
-      node: 'nsxe-site4-02'
+      display_name: 'nsxe-site3-02'
+      node: 'nsxe-site3-02'
       nvds:
         - tz: 'OverlayTZ'
           uplink_profile: 'edge-profile'
           uplink_mapping:
             uplink0: 'fp-eth0'
           ip_assignment:
-            ippool: 'tep-for-edge'
+            ippool: 'tep-for-esxi'            
         - tz: 'VlanTZ'
           uplink_profile: 'edge-profile'
           uplink_mapping:
@@ -181,5 +169,5 @@ tasks:
     data:
       display_name: 'EdgeCluster1'
       members:
-        - 'nsxe-site4-01'
-        - 'nsxe-site4-02'        
+        - 'nsxe-site3-01'
+        - 'nsxe-site3-02'        

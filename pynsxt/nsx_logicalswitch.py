@@ -25,6 +25,7 @@ def get_list(client):
     :param client: bravado client for NSX
     :return: returns the list of logical switch
     """
+
     request = client.__getattr__(MODULE).ListLogicalSwitches()
     response, _ = request.result()
     return response['results']
@@ -56,13 +57,16 @@ def create(client, data):
     return response
 
 
-def delete(client, data):
+def delete(client, data, force=False):
     """
     This function returns deleted LOGICALSWITCH in NSX
     :param client: bravado client for NSX
     :return: returns a list containing deleted logical switch
     """
     param = {'lswitch-id': get_id(client, data)}
+
+    if force or (data.has_key('force') and data['force']):
+        param['cascade'] = True
     request = client.__getattr__(MODULE).DeleteLogicalSwitch(**param)
     response = request.result()
     return response

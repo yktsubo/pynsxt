@@ -2,8 +2,14 @@ import nsx_logicalswitch
 import nsx_lp
 import nsx_tz
 import nsx_t0lr
+import nsx_t1lr
+import nsx_lrp
 import nsx_ippool
 import nsx_ipblock
+import nsx_dfw_section
+import nsx_nsgroup
+import nsx_ipset
+import nsx_loadbalancer
 from pynsxt_utils import has_tag, add_or_update_tag
 from logging import basicConfig, getLogger, DEBUG
 from pprint import pprint
@@ -27,35 +33,246 @@ def _tag_check(client, data, obj, module, fix=False):
         logger.error(obj + ' does not exist')
 
 
-def delete(client, data):
-    logger.info('delete nat rules on T0')
-    obj_data = {'display_name': data['t0']}
-    t0 = nsx_t0lr.get(client, obj_data)
-    param = {'logical-router-id': t0['id']}
-    request = client.__getattr__(
-        'Logical Routing And Services').ListNatRules(**param)
-    response, _ = request.result()
-    nat_ids = [i['id'] for i in response['results']]
-    for ruleid in nat_ids:
-        param = {'logical-router-id': t0['id'], 'rule-id': ruleid}
-        request = client.__getattr__(
-            'Logical Routing And Services').DeleteNatRule(**param)
-        response = request.result()
+def _cleanup_t0_snat(client, data, allocated_ips):
+    t0 = {'display_name': data['t0']}
+    t0_nat_list = nsx_t0lr.get_nat_list(client, t0)
+    snat_list = [nat for nat in t0_nat_list
+                 if nat['action'] == 'SNAT' and nat['translated_network'] in allocated_ips]
+    logger.info("Number of SNAT to be deleted: %s" % len(snat_list))
+    for nat in t0_nat_list:
+        nsx_t0lr.delete_nat(client, t0, nat)
+        logger.info("T0 SNAT: %s is deleted" % nat['display_name'])
 
-    logger.info('delete ip allocations on ip pool')
-    obj_data = {'display_name': data['ippool']['name']}
-    ippool = nsx_ippool.get(client, obj_data)
-    param = {'pool-id': ippool['id']}
-    request = client.__getattr__(
-        'Pool Management').ListIpPoolAllocations(**param)
-    poolallocations, _ = request.result()
-    if poolallocations['results']:
-        for allocation in poolallocations['results']:
-            param = {'action': 'RELEASE', 'pool-id': ippool['id'], 'AllocationIpAddress': {
-                'allocation_id': allocation['allocation_id']}}
-            request = client.__getattr__(
-                'Pool Management').AllocateOrReleaseFromIpPool(**param)
-            response, _ = request.result()
+
+def _cleanup_dfw_sections(client, data):
+    dfw_sections = get_ncp_objects(
+        nsx_dfw_section.get_list(client), cluster=data['cluster_name'])
+    logger.info("Number of Firewall Sections to be deleted: %s" %
+                len(dfw_sections))
+    if data['dry_run']:
+        return
+    for dfw in dfw_sections:
+        nsx_dfw_section.delete(client, dfw)
+        logger.info("Firewall Section: %s is deleted" % dfw['display_name'])
+
+
+def _cleanup_ns_groups(client, data):
+    nsgroups = get_ncp_objects(
+        nsx_nsgroup.get_list(client), cluster=data['cluster_name'])
+    logger.info("Number of NSGroup to be deleted: %s" %
+                len(nsgroups))
+    if data['dry_run']:
+        return
+    for nsgroup in nsgroups:
+        nsx_nsgroup.delete(client, nsgroup)
+        logger.info("NSGroup: %s is deleted" % nsgroup['display_name'])
+
+
+def _cleanup_ip_sets(client, data):
+    ipsets = get_ncp_objects(
+        nsx_ipset.get_list(client), cluster=data['cluster_name'])
+    logger.info("Number of IPset to be deleted: %s" %
+                len(ipsets))
+    if data['dry_run']:
+        return
+    for ipset in ipsets:
+        nsx_ipset.delete(client, ipset)
+        logger.info("IPset: %s is deleted" % ipset['display_name'])
+
+
+def _cleanup_dfw_sections(client, data):
+    dfw_sections = get_ncp_objects(
+        nsx_dfw_section.get_list(client), cluster=data['cluster_name'])
+    logger.info("Number of Firewall Sections to be deleted: %s" %
+                len(dfw_sections))
+    if data['dry_run']:
+        return
+    for dfw in dfw_sections:
+        nsx_dfw_section.delete(client, dfw)
+        logger.info("Firewall Section: %s is deleted" % dfw['display_name'])
+
+
+def _cleanup_lb_services(client, data):
+    lb_services = get_ncp_objects(
+        nsx_loadbalancer.get_list(client), cluster=data['cluster_name'])
+    logger.info("Number of LB to be deleted: %s" %
+                len(lb_services))
+    if data['dry_run']:
+        return
+    for lb_service in lb_services:
+        nsx_loadbalancer.delete(client, lb_service)
+        logger.info("LB: %s is deleted" % lb_service['display_name'])
+
+
+def _cleanup_lb_virtual_servers(client, data):
+    lb_vss = get_ncp_objects(
+        nsx_loadbalancer.get_virtualserver_list(client), cluster=data['cluster_name'])
+    logger.info("Number of LB virtual server to be deleted: %s" %
+                len(lb_vss))
+    if data['dry_run']:
+        return
+    for lb_vs in lb_vss:
+        nsx_loadbalancer.delete_virtualserver(client, lb_vs)
+        logger.info("LB virtual server: %s is deleted" %
+                    lb_vs['display_name'])
+
+
+def _cleanup_lb_rules(client, data):
+    lb_rules = get_ncp_objects(
+        nsx_loadbalancer.get_rule_list(client), cluster=data['cluster_name'])
+    logger.info("Number of LB rule to be deleted: %s" %
+                len(lb_rules))
+    if data['dry_run']:
+        return
+    for lb_rule in lb_rules:
+        nsx_loadbalancer.delete_rule(client, lb_rule)
+        logger.info("LB rule: %s is deleted" %
+                    lb_rule['display_name'])
+
+
+def _cleanup_lb_pools(client, data):
+    lb_pools = get_ncp_objects(
+        nsx_loadbalancer.get_pool_list(client), cluster=data['cluster_name'])
+    logger.info("Number of LB pool to be deleted: %s" %
+                len(lb_pools))
+    if data['dry_run']:
+        return
+    for lb_pool in lb_pools:
+        nsx_loadbalancer.delete_pool(client, lb_pool)
+        logger.info("LB pool: %s is deleted" %
+                    lb_pool['display_name'])
+
+
+def _cleanup_lrp(client, data):
+
+    lrps = get_ncp_objects(
+        nsx_lrp.get_list(client), cluster=data['cluster_name'])
+    logger.info("Number of Logical Router port to be deleted: %s" %
+                len(lrps))
+    if data['dry_run']:
+        return
+    for lrp in lrps:
+        nsx_lrp.delete(client, lrp, force=True)
+        logger.info("Logical Router port: %s is deleted" %
+                    lrp['display_name'])
+
+
+def _cleanup_lp(client, data):
+
+    lps = get_ncp_objects(
+        nsx_lp.get_list(client), cluster=data['cluster_name'])
+    logger.info("Number of Logical port to be deleted: %s" %
+                len(lps))
+    if data['dry_run']:
+        return
+    for lp in lps:
+        nsx_lp.delete(client, lp, force=True)
+        logger.info("Logical port: %s is deleted" %
+                    lp['display_name'])
+
+
+def _cleanup_t1lr(client, data):
+    t1_routers = get_ncp_objects(
+        nsx_t1lr.get_list(client), cluster=data['cluster_name'])
+    logger.info("Number of T1 Router to be deleted: %s" %
+                len(t1_routers))
+    if data['dry_run']:
+        return
+    for t1 in t1_routers:
+        lrps = nsx_lrp.get_list(client, logical_router_id=t1['id'])
+        for lrp in lrps:
+            nsx_lrp.delete(client, lrp, force=True)
+            logger.info("Logical Router port: %s is deleted" %
+                        lrp['display_name'])
+
+        nsx_t1lr.delete(client, t1)
+        logger.info("T1 Router: %s is deleted" %
+                    t1['display_name'])
+
+
+def _cleanup_logicalswitch(client, data):
+    logical_switches = get_ncp_objects(
+        nsx_logicalswitch.get_list(client), cluster=data['cluster_name'])
+    logger.info("Number of Logical Switch to be deleted: %s" %
+                len(logical_switches))
+    if data['dry_run']:
+        return
+    for ls in logical_switches:
+        nsx_logicalswitch.delete(client, ls, force=True)
+        logger.info("Logical Switch: %s is deleted" %
+                    ls['display_name'])
+
+
+def _cleanup_ippool(client, data):
+    ippools = get_ncp_objects(
+        nsx_ippool.get_list(client), cluster=data['cluster_name'])
+    logger.info("Number of IP pool to be deleted: %s" %
+                len(ippools))
+    if data['dry_run']:
+        return
+    for ippool in ippools:
+        nsx_ippool.delete(client, ippool, force=True)
+        logger.info("IP pool: %s is deleted" %
+                    ippool['display_name'])
+
+
+def _cleanup_ipblock_allocation(client, data):
+    ipblock = nsx_ipblock.get(
+        client, {'display_name': data['ipblock']['name']})
+    ipblock_subnets = nsx_ipblock.get_subnet_list(client, ipblock)
+
+    logger.info("Number of IP block subnets to be deleted: %s" %
+                len(ipblock_subnets))
+    if data['dry_run']:
+        return
+    for subnet in ipblock_subnets:
+        nsx_ipblock.delete_subnet(client, subnet)
+        logger.info("IP block subnet: %s is deleted" %
+                    subnet['display_name'])
+
+
+def _cleanup_ippool_allocation(client, data):
+    ippool = nsx_ippool.get(
+        client, {'display_name': data['ippool']['name']})
+    if ippool is None:
+        return
+    ippool_allocations = nsx_ippool.get_allocations(client, ippool)
+    logger.info("Number of IP pool allocations to be deleted: %s" %
+                len(ippool_allocations))
+    allocated_ips = [allocation['allocation_id']
+                     for allocation in ippool_allocations]
+    if data['dry_run']:
+        return
+    for allocation in ippool_allocations:
+        # nsx_ippool.delete_allocation(
+        #     client, ippool, allocation['allocation_id'])
+        logger.info("IP pool allocation: %s is deleted" %
+                    allocation['allocation_id'])
+    return allocated_ips
+
+
+def get_ncp_objects(object_list, cluster=None):
+    ncp_objects = [obj for obj in object_list
+                   if has_tag(obj, {'scope': 'ncp/cluster', 'tag': cluster})]
+    return ncp_objects
+
+
+def cleanup(client, data):
+    _cleanup_dfw_sections(client, data)
+    _cleanup_ns_groups(client, data)
+    _cleanup_ip_sets(client, data)
+    _cleanup_lb_services(client, data)
+    _cleanup_lb_virtual_servers(client, data)
+    _cleanup_lb_rules(client, data)
+    _cleanup_lb_pools(client, data)
+    _cleanup_lrp(client, data)
+    _cleanup_lp(client, data)
+    _cleanup_t1lr(client, data)
+    _cleanup_logicalswitch(client, data)
+    _cleanup_ippool(client, data)
+    _cleanup_ipblock_allocation(client, data)
+    allocated_ips = _cleanup_ippool_allocation(client, data)
+    _cleanup_t0_snat(client, data, allocated_ips)
 
 
 def validate(client, data, fix=False):
@@ -109,3 +326,5 @@ def run(client, action, data, config=None):
             return None
     elif action == 'delete':
         return delete(client, data)
+    elif action == 'cleanup':
+        return cleanup(client, data)
