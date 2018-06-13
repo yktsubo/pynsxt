@@ -42,10 +42,12 @@ def create(client, data):
     return response
 
 
-def delete(client, data):
+def delete(client, data, force=False):
     """
     """
     param = {'logical-router-port-id': get_id(client, data)}
+    if force:
+        param['force'] = True
     request = client.__getattr__(MODULE).DeleteLogicalRouterPort(**param)
     response, _ = request.result()
     return response

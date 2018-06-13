@@ -1,0 +1,25 @@
+env:
+  nsxManager:
+    ip: '192.168.172.112'
+    username: 'admin'
+    password: 'VMware1!'
+      
+# action: create,update,delete
+    
+tasks:
+  - module: 'NAT'
+    action: 'create'
+    data:
+      LR: 'T0'
+      action: 'NO_SNAT'
+      display_name: 'nosnat_to_k8s'
+      match_source_network: '172.16.0.0/16'
+      match_destination_network: '192.168.110.0/24'
+      translated_network: ''
+      rule_priority: 800
+  # - module: 'NAT'
+  #   action: 'delete'
+  #   data:
+  #     LR: 'T0'
+  #     display_name: 'nosnat_to_k8s'
+

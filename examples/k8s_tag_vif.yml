@@ -1,6 +1,6 @@
 env:
   nsxManager:
-    ip: '10.16.181.153'
+    ip: '10.16.181.53'
     username: 'admin'    
     password: 'VMware1!' 
   nsxController:
@@ -17,7 +17,7 @@ env:
     
 tasks:
 tasks:
-  - module: 'K8s'
+  - module: 'k8s'
     action: 'update'
     data:
       validate:

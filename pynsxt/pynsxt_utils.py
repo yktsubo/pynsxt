@@ -14,6 +14,7 @@ import uuid
 from pprint import pprint
 from bravado.client import SwaggerClient
 from bravado.requests_client import RequestsClient
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
 
 def load_configfile(args):
@@ -48,7 +49,8 @@ def exec_command(cli, cmd, display=False):
 def get_api_client(config, validation=False):
     if config.has_key('client'):
         return config['client']
-
+    requests.packages.urllib3.disable_warnings(
+        InsecureRequestWarning)  # Disable SSL warnings
     url = "https://%s/api/v1/spec/openapi/nsx_api.json" % config['nsxManager']['ip']
     base64string = base64.encodestring(('%s:%s' % (
         config['nsxManager']['username'], config['nsxManager']['password'])).encode("utf-8"))[:-1]

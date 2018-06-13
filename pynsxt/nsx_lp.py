@@ -52,10 +52,12 @@ def create(client, data):
     return response
 
 
-def delete(client, data):
+def delete(client, data, force=False):
     """
     """
     param = {'lport-id': get_id(client, data)}
+    if force:
+        param['detach'] = True
     request = client.__getattr__(MODULE).DeleteLogicalPort(**param)
     response, _ = request.result()
     return response

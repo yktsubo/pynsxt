@@ -23,6 +23,13 @@ def get_list(client):
     return response['results']
 
 
+def get_allocations(client, data):
+    param = {'pool-id': get_id(client, data)}
+    request = client.__getattr__(MODULE).ListIpPoolAllocations(**param)
+    response, _ = request.result()
+    return response['results']
+
+
 def get_id(client, data):
     if data.has_key('id'):
         return data['id']
@@ -35,7 +42,10 @@ def get_id(client, data):
 
 
 def get(client, data):
-    param = {'pool-id': get_id(client, data)}
+    obj_id = get_id(client, data)
+    if not obj_id:
+        return None
+    param = {'pool-id': obj_id}
     request = client.__getattr__(MODULE).ReadIpPool(**param)
     response, _ = request.result()
     return response
@@ -64,12 +74,22 @@ def create(client, data):
     return response
 
 
-def delete(client, data):
+def delete(client, data, force=False):
     """
     """
     param = {'pool-id': get_id(client, data)}
+    if force:
+        param['force'] = True
     request = client.__getattr__(MODULE).DeleteIpPool(**param)
     response = request.result()
+    return response
+
+
+def delet_allocation(client, ippool, allocation):
+    param = {'action': 'RELEASE', 'pool-id': ippool['id'], 'AllocationIpAddress': {
+        'allocation_id': allocation['allocation_id']}}
+    request = client.__getattr__(MODULE).AllocateOrReleaseFromIpPool(**param)
+    response, _ = request.result()
     return response
 
 
