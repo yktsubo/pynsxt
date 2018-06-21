@@ -33,16 +33,17 @@ def _tag_check(client, data, obj, module, fix=False):
         logger.error(obj + ' does not exist')
 
 
-def _cleanup_t0_snat(client, data, allocated_ips):
+def _cleanup_t0_snat(client, data,  allocated_subnets):
     t0 = {'display_name': data['t0']}
-    t0_nat_list = nsx_t0lr.get_nat_list(client, t0)
-    snat_list = [nat for nat in t0_nat_list
-                 if nat['action'] == 'SNAT' and nat['translated_network'] in allocated_ips]
+    snat_list = get_ncp_objects(nsx_t0lr.get_nat_list(client, t0), cluster=data['cluster_name'])
     logger.info("Number of SNAT to be deleted: %s" % len(snat_list))
+    allocated_ips = [snat['translated_network'] for snat in snat_list]
+    if data['dry_run']:
+        return allocated_ips
     for nat in t0_nat_list:
         nsx_t0lr.delete_nat(client, t0, nat)
         logger.info("T0 SNAT: %s is deleted" % nat['display_name'])
-
+    return allocated_ips
 
 def _cleanup_dfw_sections(client, data):
     dfw_sections = get_ncp_objects(
@@ -109,13 +110,14 @@ def _cleanup_lb_virtual_servers(client, data):
         nsx_loadbalancer.get_virtualserver_list(client), cluster=data['cluster_name'])
     logger.info("Number of LB virtual server to be deleted: %s" %
                 len(lb_vss))
+    allocated_lbip = [lb_vs['ip_address'] for lb_vs in lb_vss]
     if data['dry_run']:
-        return
+        return allocated_lbip
     for lb_vs in lb_vss:
         nsx_loadbalancer.delete_virtualserver(client, lb_vs)
         logger.info("LB virtual server: %s is deleted" %
                     lb_vs['display_name'])
-
+    return allocated_lbip
 
 def _cleanup_lb_rules(client, data):
     lb_rules = get_ncp_objects(
@@ -208,47 +210,62 @@ def _cleanup_ippool(client, data):
         nsx_ippool.get_list(client), cluster=data['cluster_name'])
     logger.info("Number of IP pool to be deleted: %s" %
                 len(ippools))
+
+    allocated_subnets = [ippool['subnets'][0]['cidr'] for ippool in ippools]
     if data['dry_run']:
-        return
+        return allocated_subnets            
+
     for ippool in ippools:
         nsx_ippool.delete(client, ippool, force=True)
         logger.info("IP pool: %s is deleted" %
                     ippool['display_name'])
+    return allocated_subnets
 
 
-def _cleanup_ipblock_allocation(client, data):
+def _cleanup_ipblock_allocation(client, data, allocated_subnets):
     ipblock = nsx_ipblock.get(
         client, {'display_name': data['ipblock']['name']})
-    ipblock_subnets = nsx_ipblock.get_subnet_list(client, ipblock)
-
+    all_ipblock_subnets = nsx_ipblock.get_subnet_list(client, ipblock)
+    ipblock_subnets = [subnet for subnet in all_ipblock_subnets
+                       if subnet['cidr'] in allocated_subnets]
+    allocated_subnet = [subnet['cidr'] for subnet in ipblock_subnets]
+    left_allocated_subnet = set(allocated_subnets) - set(allocated_subnet)
+    
     logger.info("Number of IP block subnets to be deleted: %s" %
                 len(ipblock_subnets))
+    for subnet in left_allocated_subnet:
+        logger.warning("Allocated Subnet: %s is not deleted" % subnet)
+    
     if data['dry_run']:
         return
     for subnet in ipblock_subnets:
         nsx_ipblock.delete_subnet(client, subnet)
         logger.info("IP block subnet: %s is deleted" %
-                    subnet['display_name'])
+                    subnet['cidr'])
 
 
-def _cleanup_ippool_allocation(client, data):
+def _cleanup_ippool_allocation(client, data, allocated_ips):
     ippool = nsx_ippool.get(
         client, {'display_name': data['ippool']['name']})
     if ippool is None:
         return
-    ippool_allocations = nsx_ippool.get_allocations(client, ippool)
+    all_allocations = nsx_ippool.get_allocations(client, ippool)
+    ippool_allocations = [ip for ip in all_allocations if ip['allocation_id'] in allocated_ips]
+    allocated_ip = [ip['allocation_id'] for ip in ippool_allocations]
+    left_allocated_ip = set(allocated_ips) - set(allocated_ip)
     logger.info("Number of IP pool allocations to be deleted: %s" %
                 len(ippool_allocations))
-    allocated_ips = [allocation['allocation_id']
-                     for allocation in ippool_allocations]
+    for ip in left_allocated_ip:
+        logger.warning("Allocated IP: %s is not deleted" % ip)
+    
     if data['dry_run']:
         return
     for allocation in ippool_allocations:
-        # nsx_ippool.delete_allocation(
-        #     client, ippool, allocation['allocation_id'])
+        nsx_ippool.delete_allocation(
+            client, ippool, allocation['allocation_id'])
         logger.info("IP pool allocation: %s is deleted" %
                     allocation['allocation_id'])
-    return allocated_ips
+    return 
 
 
 def get_ncp_objects(object_list, cluster=None):
@@ -262,18 +279,18 @@ def cleanup(client, data):
     _cleanup_ns_groups(client, data)
     _cleanup_ip_sets(client, data)
     _cleanup_lb_services(client, data)
-    _cleanup_lb_virtual_servers(client, data)
+    allocated_lbip = _cleanup_lb_virtual_servers(client, data)
     _cleanup_lb_rules(client, data)
     _cleanup_lb_pools(client, data)
     _cleanup_lrp(client, data)
     _cleanup_lp(client, data)
     _cleanup_t1lr(client, data)
     _cleanup_logicalswitch(client, data)
-    _cleanup_ippool(client, data)
-    _cleanup_ipblock_allocation(client, data)
-    allocated_ips = _cleanup_ippool_allocation(client, data)
-    _cleanup_t0_snat(client, data, allocated_ips)
-
+    allocated_subnets = _cleanup_ippool(client, data)
+    _cleanup_ipblock_allocation(client, data, allocated_subnets)
+    allocated_ips = _cleanup_t0_snat(client, data, allocated_subnets)
+    allocated_ips.extend(allocated_lbip)
+    _cleanup_ippool_allocation(client, data, list(set(allocated_ips)))
 
 def validate(client, data, fix=False):
     cluster_tag = {'scope': 'ncp/cluster', 'tag': data['cluster_name']}
