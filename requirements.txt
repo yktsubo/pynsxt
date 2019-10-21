@@ -3,7 +3,7 @@ bravado==9.3.0
 bravado-core==5.0.3
 certifi==2018.4.16
 chardet==3.0.4
-ecdsa==0.13
+ecdsa==0.13.3
 enum34==1.1.6
 functools32==3.2.3.post2
 httplib2==0.9.1
